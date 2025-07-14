@@ -65,7 +65,7 @@ pnpm run start
 
 The server provides the following resources:
 
-- `nlobby://announcements` - School announcements and notices
+- `nlobby://news` - School news and notices
 - `nlobby://schedule` - Daily class schedule and events
 
 - `nlobby://user-profile` - Current user information
@@ -84,7 +84,7 @@ Available tools:
 
 #### Data Retrieval Tools
 
-- `get_announcements` - Retrieve school announcements
+- `get_news` - Retrieve school news
 - `get_news_detail` - Retrieve detailed information for a specific news article
 - `get_schedule` - Get schedule for a specific date (backward compatibility)
 - `get_calendar_events` - Get calendar events with advanced options (personal/school)
@@ -133,8 +133,8 @@ login_help email="your.name@nnn.ed.jp"
 # Use interactive login (recommended)
 interactive_login
 
-# Get today's announcements
-get_announcements
+# Get today's news
+get_news
 
 # Get detailed information for a specific news article
 get_news_detail newsId="980"
@@ -168,8 +168,8 @@ login_help email="parent@gmail.com"
 # Use interactive login
 interactive_login
 
-# Check your child's announcements
-get_announcements
+# Check your child's news
+get_news
 
 # Get your child's schedule
 get_calendar_events calendar_type="personal" period="today"

@@ -65,21 +65,19 @@ export class NLobbyApi {
 		this.session = session;
 	}
 
-	async getAnnouncements(): Promise<NLobbyAnnouncement[]> {
-		console.log('[INFO] Starting getAnnouncements with HTTP client...');
+	async getNews(): Promise<NLobbyAnnouncement[]> {
+		console.log('[INFO] Starting getNews with HTTP client...');
 		console.log('[STATUS] Current authentication status:', this.getCookieStatus());
 
 		try {
-			console.log(
-				'[INFO] Fetching announcements via HTTP client (same method as test_page_content)...'
-			);
+			console.log('[INFO] Fetching news via HTTP client (same method as test_page_content)...');
 
 			const html = await this.fetchRenderedHtml('/news');
-			const announcements = this.parseAnnouncementsFromHtml(html);
+			const news = this.parseNewsFromHtml(html);
 
-			if (announcements && announcements.length > 0) {
-				console.log(`[SUCCESS] Retrieved ${announcements.length} announcements from HTML`);
-				return announcements;
+			if (news && news.length > 0) {
+				console.log(`[SUCCESS] Retrieved ${news.length} news items from HTML`);
+				return news;
 			} else {
 				console.log('[WARNING] HTML scraping returned no data');
 
@@ -101,14 +99,14 @@ Troubleshooting steps:
 				throw new Error(debugInfo);
 			}
 		} catch (error) {
-			console.error('[ERROR] getAnnouncements failed:', error);
+			console.error('[ERROR] getNews failed:', error);
 
 			if (error instanceof Error) {
 				throw error; // Re-throw our detailed error
 			}
 
 			throw new Error(
-				`Failed to fetch announcements with HTTP client: ${error instanceof Error ? error.message : 'Unknown error'}`
+				`Failed to fetch news with HTTP client: ${error instanceof Error ? error.message : 'Unknown error'}`
 			);
 		}
 	}
@@ -962,7 +960,7 @@ Troubleshooting steps:
 			});
 
 			console.log(
-				`[TARGET] Cheerio parsing completed: ${announcements.length} announcements extracted`
+				`[TARGET] Cheerio parsing completed: ${announcements.length} news items extracted`
 			);
 			return announcements;
 		} catch (error) {
@@ -974,7 +972,7 @@ Troubleshooting steps:
 		}
 	}
 
-	private parseAnnouncementsFromHtml(html: string): NLobbyAnnouncement[] {
+	private parseNewsFromHtml(html: string): NLobbyAnnouncement[] {
 		const announcements: NLobbyAnnouncement[] = [];
 
 		try {
@@ -1112,7 +1110,7 @@ Troubleshooting steps:
 			const cheerioAnnouncements = this.parseAnnouncementsWithCheerio(html);
 			if (cheerioAnnouncements && cheerioAnnouncements.length > 0) {
 				console.log(
-					`[SUCCESS] Cheerio DOM parsing successful: ${cheerioAnnouncements.length} announcements found`
+					`[SUCCESS] Cheerio DOM parsing successful: ${cheerioAnnouncements.length} news items found`
 				);
 				return cheerioAnnouncements;
 			} else {
@@ -1243,7 +1241,7 @@ Troubleshooting steps:
 				}
 			}
 		} catch (error) {
-			console.error('[ERROR] Error parsing announcements from HTML:', error);
+			console.error('[ERROR] Error parsing news from HTML:', error);
 		}
 
 		// If no data was found through any method, log detailed information for debugging
@@ -1259,7 +1257,7 @@ Troubleshooting steps:
 		);
 
 		// Return empty array instead of null to ensure consistency
-		console.log(`[STATUS] Final result: ${announcements.length} announcements extracted`);
+		console.log(`[STATUS] Final result: ${announcements.length} news items extracted`);
 		return announcements;
 	}
 
@@ -1967,10 +1965,10 @@ ${!cookiesSynced && hasHttpCookies ? '[WARNING] Cookie length mismatch detected 
 				}
 			}
 
-			const parsedAnnouncements = this.parseAnnouncementsFromHtml(response.data);
-			console.log(`[TARGET] HTML parsed announcements: ${parsedAnnouncements.length} items`);
+			const parsedNews = this.parseNewsFromHtml(response.data);
+			console.log(`[TARGET] HTML parsed news: ${parsedNews.length} items`);
 
-			return parsedAnnouncements;
+			return parsedNews;
 		} catch (error) {
 			console.error('[ERROR] HTML fetch failed:', {
 				message: error instanceof Error ? error.message : 'Unknown error',

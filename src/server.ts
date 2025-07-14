@@ -48,9 +48,9 @@ export class NLobbyMCPServer {
 			return {
 				resources: [
 					{
-						uri: 'nlobby://announcements',
-						name: 'School Announcements',
-						description: 'Latest school announcements and notices',
+						uri: 'nlobby://news',
+						name: 'School News',
+						description: 'Latest school news and notices',
 						mimeType: 'application/json',
 					},
 					{
@@ -75,14 +75,14 @@ export class NLobbyMCPServer {
 
 			try {
 				switch (uri) {
-					case 'nlobby://announcements':
-						const announcements = await this.api.getAnnouncements();
+					case 'nlobby://news':
+						const news = await this.api.getNews();
 						return {
 							contents: [
 								{
 									uri,
 									mimeType: 'application/json',
-									text: JSON.stringify(announcements, null, 2),
+									text: JSON.stringify(news, null, 2),
 								},
 							],
 						};
@@ -126,8 +126,8 @@ export class NLobbyMCPServer {
 			return {
 				tools: [
 					{
-						name: 'get_announcements',
-						description: 'Retrieve school announcements',
+						name: 'get_news',
+						description: 'Retrieve school news',
 						inputSchema: {
 							type: 'object',
 							properties: {
@@ -341,18 +341,16 @@ export class NLobbyMCPServer {
 
 			try {
 				switch (name) {
-					case 'get_announcements':
+					case 'get_news':
 						try {
 							const { category } = args as { category?: string };
-							const announcements = await this.api.getAnnouncements();
-							const filteredAnnouncements = category
-								? announcements.filter((a) => a.category === category)
-								: announcements;
+							const news = await this.api.getNews();
+							const filteredNews = category ? news.filter((n) => n.category === category) : news;
 							return {
 								content: [
 									{
 										type: 'text',
-										text: JSON.stringify(filteredAnnouncements, null, 2),
+										text: JSON.stringify(filteredNews, null, 2),
 									},
 								],
 							};
@@ -786,7 +784,7 @@ export class NLobbyMCPServer {
 		else {
 			recommendations.push('1. Check the authentication status above for specific issues');
 			recommendations.push('2. Run health_check to verify overall system health');
-			recommendations.push('3. Try get_announcements to test data retrieval');
+			recommendations.push('3. Try get_news to test data retrieval');
 		}
 
 		return recommendations.join('\n');
