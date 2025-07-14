@@ -1,5 +1,7 @@
 # N Lobby MCP Server
 
+> **Note:** The developer assumes no responsibility for any damages that may occur from using this MCP server. This software was developed for educational purposes and its operation is not guaranteed.
+
 A Model Context Protocol (MCP) server for accessing N Lobby school portal data. This server provides secure access to school information including announcements, schedules, and learning resources through browser-based authentication.
 
 ## Features
