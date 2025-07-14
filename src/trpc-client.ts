@@ -55,11 +55,11 @@ export class TRPCClient {
 			this.allCookies = '';
 			return;
 		}
-		
+
 		this.allCookies = cookies;
 		console.log('[SUCCESS] tRPC client cookies updated');
 		console.log(`[SIZE] tRPC cookie string length: ${cookies.length}`);
-		
+
 		// Verify cookies are properly set
 		if (this.allCookies === cookies) {
 			console.log('[SUCCESS] tRPC cookie verification successful');
@@ -72,7 +72,7 @@ export class TRPCClient {
 		this.httpClient.interceptors.request.use((config) => {
 			// Priority: Use all cookies if available, otherwise fall back to NextAuth cookies
 			let cookieHeader: string | undefined;
-			
+
 			if (this.allCookies && this.allCookies.trim() !== '') {
 				cookieHeader = this.allCookies;
 				console.log('[COOKIE] Using all cookies for tRPC request');
@@ -92,11 +92,20 @@ export class TRPCClient {
 				config.headers['Cookie'] = cookieHeader;
 			}
 
+			// Add Authorization header with NextAuth session token
+			const sessionToken = this.nextAuth.getSessionToken();
+			if (sessionToken) {
+				config.headers['Authorization'] = `Bearer ${sessionToken}`;
+				console.log('Added Authorization header with session token');
+			} else {
+				console.warn('[WARNING] No session token available for Authorization header');
+			}
+
 			// Add CSRF token to headers if available
 			const csrfToken = this.nextAuth.getCookies().csrfToken;
 			if (csrfToken) {
 				config.headers['X-CSRF-Token'] = csrfToken;
-				console.log('🔒 Added CSRF token to tRPC request');
+				console.log('Added CSRF token to tRPC request');
 			}
 
 			// Log request details for debugging
@@ -105,7 +114,8 @@ export class TRPCClient {
 				method: config.method?.toUpperCase(),
 				hasCookies: !!cookieHeader,
 				hasCSRF: !!csrfToken,
-				cookieSource: this.allCookies ? 'allCookies' : 'nextAuth'
+				hasAuth: !!sessionToken,
+				cookieSource: this.allCookies ? 'allCookies' : 'nextAuth',
 			});
 
 			return config;
@@ -116,7 +126,7 @@ export class TRPCClient {
 				console.log('[SUCCESS] tRPC response received:', {
 					status: response.status,
 					statusText: response.statusText,
-					hasData: !!response.data
+					hasData: !!response.data,
 				});
 				return response;
 			},
@@ -125,7 +135,7 @@ export class TRPCClient {
 					status: error.response?.status,
 					statusText: error.response?.statusText,
 					message: error.message,
-					url: error.config?.url
+					url: error.config?.url,
 				});
 
 				if (error.response?.status === 401) {
@@ -138,7 +148,7 @@ export class TRPCClient {
 					console.error('[BLOCKED] tRPC endpoint not found');
 					throw new Error('tRPC endpoint not found. The API may have changed.');
 				}
-				
+
 				return Promise.reject(error);
 			}
 		);
@@ -185,7 +195,10 @@ export class TRPCClient {
 				return getResponse.data.result as T;
 			} catch (getError) {
 				console.log(`[WARNING] GET approach failed, trying POST approach...`);
-				console.log(`[DEBUG] GET error details:`, getError instanceof Error ? getError.message : 'Unknown error');
+				console.log(
+					`[DEBUG] GET error details:`,
+					getError instanceof Error ? getError.message : 'Unknown error'
+				);
 
 				// Try POST approach (JSON-RPC style)
 				const postUrl = method;
@@ -244,7 +257,9 @@ export class TRPCClient {
 				if (networkError.code === 'ECONNREFUSED') {
 					console.error('[NETWORK] Network Error: Connection refused - N Lobby may be down');
 				} else if (networkError.code === 'ETIMEDOUT') {
-					console.error('[TIMEOUT] Network Error: Request timeout - slow network or server overload');
+					console.error(
+						'[TIMEOUT] Network Error: Request timeout - slow network or server overload'
+					);
 				} else if (networkError.code === 'ENOTFOUND') {
 					console.error('[NETWORK] Network Error: DNS lookup failed - check internet connection');
 				}
@@ -296,7 +311,6 @@ export class TRPCClient {
 	async readWeights(): Promise<any[]> {
 		return this.call<any[]>('interest.readWeights');
 	}
-
 
 	async getLobbyCalendarEvents(from: string, to: string): Promise<any[]> {
 		return this.call<any[]>('calendar.getLobbyCalendarEvents', {

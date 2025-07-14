@@ -4,6 +4,7 @@ import { BrowserAuth } from './browser-auth.js';
 import { CONFIG } from './config.js';
 import { NextAuthHandler } from './nextauth.js';
 import { TRPCClient } from './trpc-client.js';
+import { CredentialManager } from './credential-manager.js';
 import {
 	NLobbySession,
 	NLobbyApiResponse,
@@ -11,6 +12,10 @@ import {
 	NLobbyNewsDetail,
 	NLobbyScheduleItem,
 	NLobbyLearningResource,
+	NLobbyRequiredCourse,
+	EducationData,
+	CourseReport,
+	CourseReportDetail,
 	CalendarType,
 	GoogleCalendarEvent,
 	GoogleCalendarResponse,
@@ -22,13 +27,14 @@ export class NLobbyApi {
 	private session: NLobbySession | null = null;
 	private nextAuth: NextAuthHandler;
 	private trpcClient: TRPCClient;
-
 	private browserAuth: BrowserAuth;
+	private credentialManager: CredentialManager;
 
 	constructor() {
 		this.nextAuth = new NextAuthHandler();
 		this.trpcClient = new TRPCClient(this.nextAuth);
 		this.browserAuth = new BrowserAuth();
+		this.credentialManager = new CredentialManager();
 
 		this.httpClient = axios.create({
 			baseURL: CONFIG.nlobby.baseUrl,
@@ -2585,5 +2591,169 @@ ${!cookiesSynced && hasHttpCookies ? '[WARNING] Cookie length mismatch detected 
 
 			return errorInfo;
 		}
+	}
+
+	async getRequiredCourses(): Promise<NLobbyRequiredCourse[]> {
+		console.log('[INFO] Starting getRequiredCourses...');
+		console.log('[STATUS] Current authentication status:', this.getCookieStatus());
+
+		try {
+			console.log('[INFO] Fetching required courses via tRPC client...');
+
+			// Call the known endpoint
+			const response = await this.trpcClient.call('requiredCourse.getRequiredCourses');
+
+			console.log('[DEBUG] Raw response type:', typeof response);
+			console.log('[DEBUG] Raw response keys:', response ? Object.keys(response) : 'null');
+			console.log('[DEBUG] Full response structure:', JSON.stringify(response, null, 2));
+
+			// Check for different possible response formats
+			let educationData: EducationData | null = null;
+
+			// Format 1: Expected format { result: { data: EducationData } }
+			if (response && response.result && response.result.data) {
+				console.log('[SUCCESS] Found data in expected format: response.result.data');
+				educationData = response.result.data;
+			}
+			// Format 2: Direct data format { data: EducationData }
+			else if (response && response.data) {
+				console.log('[SUCCESS] Found data in alternative format: response.data');
+				educationData = response.data;
+			}
+			// Format 3: Direct EducationData format
+			else if (response && response.educationProcessName && response.termYears) {
+				console.log('[SUCCESS] Found data in direct format: response as EducationData');
+				educationData = response as EducationData;
+			}
+			// Format 4: Check if response is directly an array of courses
+			else if (response && Array.isArray(response)) {
+				console.log('[SUCCESS] Found data as direct array of courses');
+				return response;
+			}
+			// Format 5: Check for other possible nested structures
+			else if (response) {
+				console.log('[INFO] Searching for education data in nested structures...');
+
+				// Search for educationProcessName in nested objects
+				const searchResult = this.findEducationDataInObject(response);
+				if (searchResult) {
+					console.log('[SUCCESS] Found education data in nested structure');
+					educationData = searchResult;
+				}
+			}
+
+			if (educationData) {
+				console.log(
+					`[SUCCESS] Retrieved education data for: ${educationData.educationProcessName}`
+				);
+				console.log(`[INFO] Found ${educationData.termYears.length} term years`);
+
+				// Flatten all courses from all term years
+				const allCourses = this.transformEducationDataToCourses(educationData);
+				console.log(`[SUCCESS] Total courses extracted: ${allCourses.length}`);
+
+				return allCourses;
+			} else {
+				console.log('[WARNING] Invalid response structure from tRPC endpoint');
+				console.log('[INFO] Response type:', typeof response);
+				console.log('[INFO] Response structure:', response ? Object.keys(response) : 'null');
+				console.log('[DEBUG] Full response for debugging:', JSON.stringify(response, null, 2));
+
+				throw new Error(`Unexpected response format from required courses endpoint. 
+Response type: ${typeof response}
+Response keys: ${response ? Object.keys(response).join(', ') : 'none'}
+Please check the API documentation or contact support.`);
+			}
+		} catch (error) {
+			console.error('[ERROR] getRequiredCourses failed:', error);
+
+			// Provide detailed error information
+			if (error instanceof Error) {
+				throw error; // Re-throw our detailed error
+			}
+
+			throw new Error(
+				`Failed to fetch required courses: ${error instanceof Error ? error.message : 'Unknown error'}`
+			);
+		}
+	}
+
+	private findEducationDataInObject(obj: any, path: string = ''): EducationData | null {
+		if (!obj || typeof obj !== 'object') return null;
+
+		// Check if this object has education data properties
+		if (obj.educationProcessName && obj.termYears && Array.isArray(obj.termYears)) {
+			console.log(`[INFO] Found education data at path: ${path}`);
+			return obj as EducationData;
+		}
+
+		// Recursively search through object properties
+		for (const [key, value] of Object.entries(obj)) {
+			if (value && typeof value === 'object') {
+				const searchPath = path ? `${path}.${key}` : key;
+				const found = this.findEducationDataInObject(value, searchPath);
+				if (found) return found;
+			}
+		}
+
+		return null;
+	}
+
+	private transformEducationDataToCourses(educationData: EducationData): NLobbyRequiredCourse[] {
+		console.log(
+			`[INFO] Transforming education data with ${educationData.termYears.length} term years...`
+		);
+
+		const allCourses: NLobbyRequiredCourse[] = [];
+
+		for (const termYear of educationData.termYears) {
+			console.log(
+				`[INFO] Processing ${termYear.grade} (${termYear.termYear}) with ${termYear.courses.length} courses`
+			);
+
+			for (const course of termYear.courses) {
+				// Calculate additional computed fields
+				const progressPercentage = this.calculateProgressPercentage(course.report);
+				const averageScore = this.calculateAverageScore(course.reportDetails);
+				const isCompleted = course.acquired.acquisitionStatus === 1;
+				const isInProgress = course.subjectStatus === 1 || course.subjectStatus === 2;
+
+				// Create enhanced course object with computed fields
+				const enhancedCourse: NLobbyRequiredCourse = {
+					...course,
+					termYear: termYear.termYear,
+					grade: termYear.grade,
+					term: termYear.term,
+					progressPercentage,
+					averageScore,
+					isCompleted,
+					isInProgress,
+				};
+
+				allCourses.push(enhancedCourse);
+				console.log(
+					`[SUCCESS] Added course: ${course.subjectName} (${course.curriculumName}) - ${termYear.grade}`
+				);
+			}
+		}
+
+		console.log(`[TARGET] Total courses processed: ${allCourses.length}`);
+		return allCourses;
+	}
+
+	private calculateProgressPercentage(report: CourseReport): number {
+		if (report.allCount === 0) return 0;
+		return Math.round((report.count / report.allCount) * 100);
+	}
+
+	private calculateAverageScore(reportDetails: CourseReportDetail[]): number | null {
+		const scoresWithValues = reportDetails.filter(
+			(detail) => detail.score !== null && detail.progress === 100
+		);
+
+		if (scoresWithValues.length === 0) return null;
+
+		const totalScore = scoresWithValues.reduce((sum, detail) => sum + (detail.score || 0), 0);
+		return Math.round(totalScore / scoresWithValues.length);
 	}
 }

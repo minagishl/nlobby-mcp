@@ -7,6 +7,7 @@ A Model Context Protocol (MCP) server for accessing N Lobby school portal data. 
 - **Browser-based Authentication**: Interactive login via automated browser window
 - **Cookie-based Session Management**: Secure session handling with NextAuth.js cookies
 - **School Information Access**: Retrieve announcements, schedules, and learning resources
+- **Required Courses Management**: Access required course information and academic data
 - **Multiple Calendar Types**: Support for both personal and school calendars
 - **User Role Support**: Different access levels for students, parents, and staff
 - **MCP Protocol Compliance**: Full compatibility with MCP-enabled AI assistants
@@ -67,7 +68,7 @@ The server provides the following resources:
 
 - `nlobby://news` - School news and notices
 - `nlobby://schedule` - Daily class schedule and events
-
+- `nlobby://required-courses` - Required courses and academic information
 - `nlobby://user-profile` - Current user information
 
 ### MCP Tools
@@ -86,6 +87,7 @@ Available tools:
 
 - `get_news` - Retrieve school news
 - `get_news_detail` - Retrieve detailed information for a specific news article
+- `get_required_courses` - Retrieve required courses information with filtering options
 - `get_schedule` - Get schedule for a specific date (backward compatibility)
 - `get_calendar_events` - Get calendar events with advanced options (personal/school)
 - `test_calendar_endpoints` - Test both personal and school calendar endpoints
@@ -144,6 +146,12 @@ get_calendar_events calendar_type="personal" period="today"
 
 # Get school calendar events for this week
 get_calendar_events calendar_type="school" period="week"
+
+# Get required courses information
+get_required_courses
+
+# Get required courses for a specific grade
+get_required_courses grade=2
 ```
 
 ### For Staff
@@ -196,6 +204,33 @@ debug_connection
 # Test page content retrieval
 test_page_content endpoint="/news"
 ```
+
+### Required Courses
+
+The `get_required_courses` tool allows you to retrieve academic course information:
+
+```bash
+# Get all required courses
+get_required_courses
+
+# Filter by grade level
+get_required_courses grade=1
+get_required_courses grade=2
+
+# Combine multiple filters
+get_required_courses grade=2 semester="2024"
+```
+
+The response includes comprehensive course information:
+
+- **Course Details**: Subject code/name, curriculum code/name
+- **Academic Credits**: Academic credit hours and approved credits
+- **Progress Tracking**: Report completion percentage, average scores
+- **Status Information**: Acquisition status, evaluation grades
+- **Test Information**: Exam status, periodic exam results, makeup exam URLs
+- **Schooling Data**: Attendance counts and requirements
+- **Time Information**: Term year, grade level (1年次, 2年次, 3年次)
+- **Computed Fields**: Progress percentage, completion status, average scores
 
 ### Calendar Events
 

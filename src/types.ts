@@ -197,6 +197,82 @@ export interface NLobbyLearningResource {
 	publishedAt: Date;
 }
 
+export interface CourseReportDetail {
+	number: number;
+	progress: number;
+	score: number | null;
+	expiration: string;
+}
+
+export interface CourseReport {
+	count: number;
+	allCount: number;
+}
+
+export interface CourseSchooling {
+	attendanceCount: number;
+	entryCount: number;
+	necessaryCount: number;
+}
+
+export interface CourseTest {
+	examStatus: number;
+	periodicExamResult: number | null;
+	makeupExamUrl: string | null;
+}
+
+export interface CourseAcquired {
+	acquisitionStatus: number;
+	academicCredit: number;
+	approvedCredit: number;
+	evaluation: string | null;
+	criterionReferencedEvaluation: string | null;
+}
+
+export interface NLobbyRequiredCourse {
+	curriculumCode: string;
+	curriculumName: string;
+	subjectCode: string;
+	subjectName: string;
+	subjectStatus: number;
+	previousRegistration: boolean;
+	report: CourseReport;
+	reportDetails: CourseReportDetail[];
+	schooling: CourseSchooling;
+	test: CourseTest;
+	acquired: CourseAcquired;
+	// Additional computed fields for convenience
+	termYear?: number;
+	grade?: string;
+	term?: number;
+	progressPercentage?: number;
+	averageScore?: number | null;
+	isCompleted?: boolean;
+	isInProgress?: boolean;
+}
+
+export interface TermYear {
+	termYear: number;
+	grade: string;
+	term: number;
+	subjectStatus: number;
+	entryAvailability: boolean;
+	entryStatus: number;
+	testDetailDestinationUrl: string | null;
+	courses: NLobbyRequiredCourse[];
+}
+
+export interface PreviousRegistration {
+	previousRegistrationAcademicCredit: number;
+	previousRegistrationCredit: number;
+}
+
+export interface EducationData {
+	educationProcessName: string;
+	previousRegistration: PreviousRegistration;
+	termYears: TermYear[];
+}
+
 export interface NLobbyApiResponse<T = any> {
 	success: boolean;
 	data?: T;

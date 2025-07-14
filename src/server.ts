@@ -66,6 +66,12 @@ export class NLobbyMCPServer {
 						description: 'Current user information and preferences',
 						mimeType: 'application/json',
 					},
+					{
+						uri: 'nlobby://required-courses',
+						name: 'Required Courses',
+						description: 'Required courses and academic information',
+						mimeType: 'application/json',
+					},
 				],
 			};
 		});
@@ -111,6 +117,18 @@ export class NLobbyMCPServer {
 							],
 						};
 
+					case 'nlobby://required-courses':
+						const courses = await this.api.getRequiredCourses();
+						return {
+							contents: [
+								{
+									uri,
+									mimeType: 'application/json',
+									text: JSON.stringify(courses, null, 2),
+								},
+							],
+						};
+
 					default:
 						throw new McpError(ErrorCode.InvalidRequest, `Unknown resource: ${uri}`);
 				}
@@ -150,6 +168,28 @@ export class NLobbyMCPServer {
 								},
 							},
 							required: ['newsId'],
+						},
+					},
+					{
+						name: 'get_required_courses',
+						description: 'Retrieve required courses information with detailed progress tracking',
+						inputSchema: {
+							type: 'object',
+							properties: {
+								grade: {
+									type: 'number',
+									description: 'Filter by grade level (1, 2, or 3) (optional)',
+								},
+								semester: {
+									type: 'string',
+									description: 'Filter by term year (e.g., "2024", "2025") (optional)',
+								},
+								category: {
+									type: 'string',
+									description:
+										'Filter by curriculum category (e.g., "国語", "数学", "英語") (optional)',
+								},
+							},
 						},
 					},
 					{
@@ -374,6 +414,79 @@ export class NLobbyMCPServer {
 									{
 										type: 'text',
 										text: JSON.stringify(newsDetail, null, 2),
+									},
+								],
+							};
+						} catch (error) {
+							return {
+								content: [
+									{
+										type: 'text',
+										text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}\n\nTo authenticate:\n1. Login to N Lobby in your browser\n2. Open Developer Tools (F12)\n3. Go to Application/Storage tab\n4. Copy cookies and use the set_cookies tool\n5. Use health_check to verify connection`,
+									},
+								],
+							};
+						}
+
+					case 'get_required_courses':
+						try {
+							const { grade, semester, category } = args as {
+								grade?: number;
+								semester?: string;
+								category?: string;
+							};
+
+							const courses = await this.api.getRequiredCourses();
+
+							// Apply filters if provided
+							let filteredCourses = courses;
+
+							if (grade !== undefined) {
+								// Filter by grade (year) - convert grade number to grade string
+								const gradeString =
+									grade === 1
+										? '1年次'
+										: grade === 2
+											? '2年次'
+											: grade === 3
+												? '3年次'
+												: `${grade}年次`;
+								filteredCourses = filteredCourses.filter((course) => course.grade === gradeString);
+							}
+
+							if (semester) {
+								// Filter by semester/term - this data isn't directly available in the current structure
+								// Could filter by term year or other available fields
+								filteredCourses = filteredCourses.filter(
+									(course) => course.termYear && course.termYear.toString().includes(semester)
+								);
+							}
+
+							if (category) {
+								// Filter by curriculum name (subject category)
+								filteredCourses = filteredCourses.filter(
+									(course) =>
+										course.curriculumName &&
+										course.curriculumName.toLowerCase().includes(category.toLowerCase())
+								);
+							}
+
+							// Create a summary with useful information
+							const summary = {
+								totalCourses: filteredCourses.length,
+								filters: { grade, semester, category },
+								coursesByGrade: this.groupCoursesByGrade(filteredCourses),
+								coursesByCurriculum: this.groupCoursesByCurriculum(filteredCourses),
+								completedCourses: filteredCourses.filter((course) => course.isCompleted).length,
+								inProgressCourses: filteredCourses.filter((course) => course.isInProgress).length,
+								courses: filteredCourses,
+							};
+
+							return {
+								content: [
+									{
+										type: 'text',
+										text: JSON.stringify(summary, null, 2),
 									},
 								],
 							};
@@ -788,5 +901,27 @@ export class NLobbyMCPServer {
 		}
 
 		return recommendations.join('\n');
+	}
+
+	private groupCoursesByGrade(courses: any[]): Record<string, number> {
+		const groups: Record<string, number> = {};
+
+		for (const course of courses) {
+			const grade = course.grade || 'Unknown';
+			groups[grade] = (groups[grade] || 0) + 1;
+		}
+
+		return groups;
+	}
+
+	private groupCoursesByCurriculum(courses: any[]): Record<string, number> {
+		const groups: Record<string, number> = {};
+
+		for (const course of courses) {
+			const curriculum = course.curriculumName || 'Unknown';
+			groups[curriculum] = (groups[curriculum] || 0) + 1;
+		}
+
+		return groups;
 	}
 }
