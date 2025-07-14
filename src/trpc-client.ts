@@ -188,7 +188,7 @@ export class TRPCClient {
       );
 
       // Try GET approach first (query-based tRPC)
-      console.log("🔄 Trying GET approach...");
+      console.log("Trying GET approach...");
       try {
         const url = this.buildTRPCUrl(method, params);
         console.log(`[URL] tRPC GET URL: ${url}`);

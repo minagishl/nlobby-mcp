@@ -750,7 +750,7 @@ Troubleshooting steps:
   // Backward compatibility method
   async getScheduleByDate(date?: string): Promise<NLobbyScheduleItem[]> {
     console.log(
-      `🔄 Using backward compatibility method for date: ${date || "today"}`,
+      `Using backward compatibility method for date: ${date || "today"}`,
     );
 
     let dateRange: CalendarDateRange;
@@ -1601,7 +1601,7 @@ Troubleshooting steps:
    - CSRF token: ${nextAuthCookies.csrfToken ? "[SUCCESS] present" : "[ERROR] missing"}
    - Callback URL: ${nextAuthCookies.callbackUrl ? "[SUCCESS] present" : "[ERROR] missing"}
 
-🔄 Cookie Synchronization: ${cookiesSynced ? "[SUCCESS] synchronized" : "[ERROR] not synchronized"}
+Cookie Synchronization: ${cookiesSynced ? "[SUCCESS] synchronized" : "[ERROR] not synchronized"}
 ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected - may cause authentication issues" : ""}`;
   }
 
@@ -2359,7 +2359,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
   private transformNewsToAnnouncements(newsData: any[]): NLobbyAnnouncement[] {
     console.log(
-      `🔄 Transforming ${newsData.length} news items to announcements...`,
+      `Transforming ${newsData.length} news items to announcements...`,
     );
 
     return newsData.map((item, index) => {
