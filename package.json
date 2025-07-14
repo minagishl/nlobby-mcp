@@ -42,5 +42,10 @@
   },
   "bin": {
     "nlobby-mcp": "dist/index.js"
-  }
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ]
 }

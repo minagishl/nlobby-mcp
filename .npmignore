@@ -1,0 +1,39 @@
+# Source files
+src/
+*.ts
+!dist/
+
+# Development files
+.env
+.env.*
+tsconfig.json
+jest.config.js
+
+# IDE files
+.vscode/
+.idea/
+
+# Build artifacts
+node_modules/
+*.log
+*.tgz
+
+# Git and CI
+.git/
+.github/
+.gitignore
+
+# Documentation development files
+docs/
+examples/
+
+# Test files
+test/
+tests/
+__tests__/
+*.test.*
+*.spec.*
+
+# Development scripts
+scripts/
+tools/
