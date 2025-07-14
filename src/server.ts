@@ -139,6 +139,20 @@ export class NLobbyMCPServer {
 						},
 					},
 					{
+						name: 'get_news_detail',
+						description: 'Retrieve detailed information for a specific news article',
+						inputSchema: {
+							type: 'object',
+							properties: {
+								newsId: {
+									type: 'string',
+									description: 'The ID of the news article to retrieve',
+								},
+							},
+							required: ['newsId'],
+						},
+					},
+					{
 						name: 'get_schedule',
 						description: 'Get school schedule for a specific date (backward compatibility)',
 						inputSchema: {
@@ -339,6 +353,29 @@ export class NLobbyMCPServer {
 									{
 										type: 'text',
 										text: JSON.stringify(filteredAnnouncements, null, 2),
+									},
+								],
+							};
+						} catch (error) {
+							return {
+								content: [
+									{
+										type: 'text',
+										text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}\n\nTo authenticate:\n1. Login to N Lobby in your browser\n2. Open Developer Tools (F12)\n3. Go to Application/Storage tab\n4. Copy cookies and use the set_cookies tool\n5. Use health_check to verify connection`,
+									},
+								],
+							};
+						}
+
+					case 'get_news_detail':
+						try {
+							const { newsId } = args as { newsId: string };
+							const newsDetail = await this.api.getNewsDetail(newsId);
+							return {
+								content: [
+									{
+										type: 'text',
+										text: JSON.stringify(newsDetail, null, 2),
 									},
 								],
 							};

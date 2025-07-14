@@ -85,6 +85,7 @@ Available tools:
 #### Data Retrieval Tools
 
 - `get_announcements` - Retrieve school announcements
+- `get_news_detail` - Retrieve detailed information for a specific news article
 - `get_schedule` - Get schedule for a specific date (backward compatibility)
 - `get_calendar_events` - Get calendar events with advanced options (personal/school)
 - `test_calendar_endpoints` - Test both personal and school calendar endpoints
@@ -134,6 +135,9 @@ interactive_login
 
 # Get today's announcements
 get_announcements
+
+# Get detailed information for a specific news article
+get_news_detail newsId="980"
 
 # Get personal calendar events for today
 get_calendar_events calendar_type="personal" period="today"

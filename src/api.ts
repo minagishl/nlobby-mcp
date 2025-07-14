@@ -8,6 +8,7 @@ import {
 	NLobbySession,
 	NLobbyApiResponse,
 	NLobbyAnnouncement,
+	NLobbyNewsDetail,
 	NLobbyScheduleItem,
 	NLobbyLearningResource,
 	CalendarType,
@@ -109,6 +110,215 @@ Troubleshooting steps:
 			throw new Error(
 				`Failed to fetch announcements with HTTP client: ${error instanceof Error ? error.message : 'Unknown error'}`
 			);
+		}
+	}
+
+	async getNewsDetail(newsId: string): Promise<NLobbyNewsDetail> {
+		console.log(`[INFO] Fetching news detail for ID: ${newsId}`);
+		console.log('[STATUS] Current authentication status:', this.getCookieStatus());
+
+		try {
+			const newsUrl = `/news/${newsId}`;
+			console.log(`[INFO] Fetching news detail from: ${newsUrl}`);
+
+			const html = await this.fetchRenderedHtml(newsUrl);
+			console.log(`[SUCCESS] Retrieved HTML for news ${newsId}: ${html.length} characters`);
+
+			const newsDetail = this.parseNewsDetailFromHtml(html, newsId);
+
+			if (newsDetail) {
+				console.log(`[SUCCESS] Parsed news detail: ${newsDetail.title}`);
+				return newsDetail;
+			} else {
+				throw new Error(`Failed to parse news detail from HTML for news ID: ${newsId}`);
+			}
+		} catch (error) {
+			console.error(`[ERROR] getNewsDetail failed for ID ${newsId}:`, error);
+
+			if (error instanceof Error) {
+				throw error;
+			}
+
+			throw new Error(
+				`Failed to fetch news detail for ID ${newsId}: ${error instanceof Error ? error.message : 'Unknown error'}`
+			);
+		}
+	}
+
+	private parseNewsDetailFromHtml(html: string, newsId: string): NLobbyNewsDetail | null {
+		try {
+			console.log('[INFO] Starting news detail HTML parsing...');
+			console.log(`[DATA] HTML length: ${html.length} characters`);
+
+			// Extract data from Next.js self.__next_f.push() calls
+			console.log('[STEP1] Extracting data from Next.js self.__next_f.push() calls...');
+			const nextFPushMatches = html.match(/self\.__next_f\.push\((\[.*?\])\)/g);
+
+			if (!nextFPushMatches || nextFPushMatches.length === 0) {
+				console.log('[ERROR] No self.__next_f.push() calls found in HTML');
+				return null;
+			}
+
+			console.log(`[SUCCESS] Found ${nextFPushMatches.length} self.__next_f.push() calls`);
+
+			let newsData: any = null;
+			let contentData: string = '';
+			const contentReferences: Map<string, string> = new Map();
+
+			// Parse all push calls to find news data and content references
+			for (let i = 0; i < nextFPushMatches.length; i++) {
+				const pushCall = nextFPushMatches[i];
+				try {
+					const jsonMatch = pushCall.match(/self\.__next_f\.push\((\[.*?\])\)/);
+					if (!jsonMatch) continue;
+
+					const pushData = JSON.parse(jsonMatch[1]);
+
+					// Check for content references (e.g., "29:T738,")
+					if (
+						pushData.length >= 2 &&
+						typeof pushData[1] === 'string' &&
+						pushData[1].match(/^\d+:T\d+,?$/)
+					) {
+						const refKey = pushData[1].replace(/,$/, '');
+						console.log(`[INFO] Found content reference: ${refKey}`);
+
+						// Look for the actual content in the next push call
+						if (i + 1 < nextFPushMatches.length) {
+							const nextPushCall = nextFPushMatches[i + 1];
+							const nextJsonMatch = nextPushCall.match(/self\.__next_f\.push\((\[.*?\])\)/);
+							if (nextJsonMatch) {
+								const nextPushData = JSON.parse(nextJsonMatch[1]);
+								if (nextPushData.length >= 2 && typeof nextPushData[1] === 'string') {
+									contentReferences.set(refKey, nextPushData[1]);
+									console.log(
+										`[SUCCESS] Found content for reference ${refKey}: ${nextPushData[1].length} characters`
+									);
+								}
+							}
+						}
+						continue;
+					}
+
+					// Look for news data in the push call
+					if (pushData.length >= 2 && typeof pushData[1] === 'string') {
+						const stringData = pushData[1];
+
+						// Check if string starts with number and colon (e.g., "6:...")
+						const prefixMatch = stringData.match(/^(\d+):(.*)/);
+						if (prefixMatch) {
+							try {
+								const actualJsonString = prefixMatch[2];
+								const parsedContent = JSON.parse(actualJsonString);
+
+								// Look for news object in the parsed content
+								const foundNewsData = this.searchForNewsDataInObject(parsedContent);
+								if (foundNewsData) {
+									console.log(`[SUCCESS] Found news data in push call ${i + 1}`);
+									newsData = foundNewsData;
+								}
+							} catch {
+								// Continue to next push call
+							}
+						}
+					}
+				} catch {
+					// Continue to next push call
+				}
+			}
+
+			if (!newsData) {
+				console.log('[ERROR] No news data found in any push call');
+				return null;
+			}
+
+			// Extract content using references
+			if (newsData.description) {
+				// Look for content references in the description
+				for (const [refKey, content] of contentReferences) {
+					if (newsData.description.includes(refKey)) {
+						contentData = content;
+						console.log(`[SUCCESS] Found content data using reference ${refKey}`);
+						break;
+					}
+				}
+			}
+
+			// If no content found via references, try to find it directly
+			if (!contentData && contentReferences.size > 0) {
+				// Use the first content reference as fallback
+				contentData = Array.from(contentReferences.values())[0];
+				console.log('[INFO] Using first available content as fallback');
+			}
+
+			// Build the news detail object
+			const newsDetail: NLobbyNewsDetail = {
+				id: newsData.id || newsId,
+				microCmsId: newsData.microCmsId,
+				title: newsData.title || 'No Title',
+				content: this.decodeHtmlContent(contentData) || newsData.description || '',
+				description: newsData.description,
+				publishedAt: newsData.publishedAt ? new Date(newsData.publishedAt) : new Date(),
+				menuName: newsData.menuName || [],
+				isImportant: newsData.isImportant || false,
+				isByMentor: newsData.isByMentor || false,
+				attachments: newsData.attachments || [],
+				relatedEvents: newsData.relatedEvents || [],
+				targetUserQueryId: newsData.targetUserQueryId,
+				url: `${CONFIG.nlobby.baseUrl}/news/${newsId}`,
+			};
+
+			console.log(`[TARGET] Successfully parsed news detail: ${newsDetail.title}`);
+			return newsDetail;
+		} catch (error) {
+			console.error('[ERROR] Error parsing news detail from HTML:', error);
+			return null;
+		}
+	}
+
+	private searchForNewsDataInObject(obj: any, path: string = ''): any | null {
+		if (!obj || typeof obj !== 'object') return null;
+
+		// Check if this object has news-like properties
+		if (obj.id && obj.title && (obj.publishedAt || obj.description || obj.menuName)) {
+			console.log(`[INFO] Found news object at path: ${path}`);
+			return obj;
+		}
+
+		// Check for "news" property
+		if (obj.news && typeof obj.news === 'object') {
+			console.log(`[INFO] Found news property at path: ${path}.news`);
+			return obj.news;
+		}
+
+		// Recursively search through object properties
+		for (const [key, value] of Object.entries(obj)) {
+			if (value && typeof value === 'object') {
+				const searchPath = path ? `${path}.${key}` : key;
+				const found = this.searchForNewsDataInObject(value, searchPath);
+				if (found) return found;
+			}
+		}
+
+		return null;
+	}
+
+	private decodeHtmlContent(content: string): string {
+		if (!content) return '';
+
+		try {
+			// The content might be HTML-encoded
+			const decoded = content
+				.replace(/\\u003c/g, '<')
+				.replace(/\\u003e/g, '>')
+				.replace(/\\u0026/g, '&')
+				.replace(/\\"/g, '"')
+				.replace(/\\\\/g, '\\');
+
+			return decoded;
+		} catch (error) {
+			console.warn('[WARNING] Failed to decode HTML content:', error);
+			return content;
 		}
 	}
 
@@ -897,7 +1107,7 @@ Troubleshooting steps:
 				console.log('[WARNING] No self.__next_f.push() calls found in HTML');
 			}
 
-			// **FALLBACK 1**: Direct DOM parsing using Cheerio
+			// **FALLBACK 1**: Direct DOM parsing using Cheerio as fallback...
 			console.log('[STEP2] Attempting DOM parsing with Cheerio as fallback...');
 			const cheerioAnnouncements = this.parseAnnouncementsWithCheerio(html);
 			if (cheerioAnnouncements && cheerioAnnouncements.length > 0) {

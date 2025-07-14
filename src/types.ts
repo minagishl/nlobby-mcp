@@ -30,6 +30,43 @@ export interface NLobbyAnnouncement {
 	url?: string;
 }
 
+export interface NLobbyNewsDetail {
+	id: string;
+	microCmsId?: string;
+	title: string;
+	content: string; // HTML content
+	description?: string; // Plain text description
+	publishedAt: Date;
+	menuName: string[];
+	isImportant: boolean;
+	isByMentor: boolean;
+	attachments?: {
+		href: string;
+		fileName: string;
+		downloadFileName: string;
+	}[];
+	relatedEvents?: {
+		microCmsId: string;
+		dateTimes: string[];
+		deadlineDate?: string;
+		cardMake: {
+			href: string;
+			category: string;
+			title: string;
+		};
+		chips: {
+			label: string;
+			color: string;
+		}[];
+		imgObject?: {
+			url: string;
+			alt: string;
+		};
+	}[];
+	targetUserQueryId?: string;
+	url: string;
+}
+
 export interface NLobbyScheduleItem {
 	id: string;
 	title: string;
