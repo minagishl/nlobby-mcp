@@ -22,6 +22,14 @@
   ],
   "author": "minagishl",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/minagishl/nlobby-mcp.git"
+  },
+  "homepage": "https://github.com/minagishl/nlobby-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/minagishl/nlobby-mcp/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.6.0",
     "axios": "^1.6.0",
