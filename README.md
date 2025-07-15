@@ -87,12 +87,13 @@ Available tools:
 
 #### Data Retrieval Tools
 
-- `get_news` - Retrieve school news
+- `get_news` - Retrieve school news with filtering and sorting options
 - `get_news_detail` - Retrieve detailed information for a specific news article
 - `get_required_courses` - Retrieve required courses information with filtering options
 - `get_schedule` - Get schedule for a specific date (backward compatibility)
 - `get_calendar_events` - Get calendar events with advanced options (personal/school)
 - `test_calendar_endpoints` - Test both personal and school calendar endpoints
+- `mark_news_as_read` - Mark a news article as read
 
 #### Debugging Tools
 
@@ -143,6 +144,9 @@ get_news
 # Get detailed information for a specific news article
 get_news_detail newsId="980"
 
+# Get news detail and mark as read
+get_news_detail newsId="980" markAsRead=true
+
 # Get personal calendar events for today
 get_calendar_events calendar_type="personal" period="today"
 
@@ -154,6 +158,9 @@ get_required_courses
 
 # Get required courses for a specific grade
 get_required_courses grade=2
+
+# Mark a news article as read
+mark_news_as_read id="980"
 ```
 
 ### For Staff
