@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { NLobbyMCPServer } from "./server.js";
+import { logger } from "./logger.js";
 
 async function main() {
   const server = new NLobbyMCPServer();
@@ -8,6 +9,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("Fatal error:", error);
+  logger.error("Fatal error:", error);
   process.exit(1);
 });

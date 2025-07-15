@@ -1,3 +1,5 @@
+import { logger } from "./logger.js";
+
 export interface NextAuthCookies {
   sessionToken?: string;
   csrfToken?: string;
@@ -32,7 +34,7 @@ export class NextAuthHandler {
 
   setCookies(cookieString: string): void {
     this.cookies = this.parseCookies(cookieString);
-    console.log("NextAuth cookies parsed:", {
+    logger.debug("NextAuth cookies parsed:", {
       hasSessionToken: !!this.cookies.sessionToken,
       hasCsrfToken: !!this.cookies.csrfToken,
       hasCallbackUrl: !!this.cookies.callbackUrl,
@@ -90,7 +92,7 @@ export class NextAuthHandler {
         // Add other session data as needed
       };
     } catch (error) {
-      console.error("Error decoding session token:", error);
+      logger.error("Error decoding session token:", error);
       return null;
     }
   }

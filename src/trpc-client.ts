@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from "axios";
 import { CONFIG } from "./config.js";
 import { NextAuthHandler } from "./nextauth.js";
+import { logger } from "./logger.js";
 
 export interface TRPCRequest {
   id: number;
@@ -51,20 +52,20 @@ export class TRPCClient {
 
   setAllCookies(cookies: string): void {
     if (!cookies || cookies.trim() === "") {
-      console.warn("[WARNING] Empty cookies provided to tRPC client");
+      logger.warn("[WARNING] Empty cookies provided to tRPC client");
       this.allCookies = "";
       return;
     }
 
     this.allCookies = cookies;
-    console.log("[SUCCESS] tRPC client cookies updated");
-    console.log(`[SIZE] tRPC cookie string length: ${cookies.length}`);
+    logger.info("[SUCCESS] tRPC client cookies updated");
+    logger.info(`[SIZE] tRPC cookie string length: ${cookies.length}`);
 
     // Verify cookies are properly set
     if (this.allCookies === cookies) {
-      console.log("[SUCCESS] tRPC cookie verification successful");
+      logger.info("[SUCCESS] tRPC cookie verification successful");
     } else {
-      console.error("[ERROR] tRPC cookie verification failed");
+      logger.error("[ERROR] tRPC cookie verification failed");
     }
   }
 
@@ -75,15 +76,15 @@ export class TRPCClient {
 
       if (this.allCookies && this.allCookies.trim() !== "") {
         cookieHeader = this.allCookies;
-        console.log("[COOKIE] Using all cookies for tRPC request");
+        logger.debug("[COOKIE] Using all cookies for tRPC request");
       } else {
         // Fallback to NextAuth.js cookies only
         const nextAuthCookieHeader = this.nextAuth.getCookieHeader();
         if (nextAuthCookieHeader && nextAuthCookieHeader.trim() !== "") {
           cookieHeader = nextAuthCookieHeader;
-          console.log("[COOKIE] Using NextAuth cookies for tRPC request");
+          logger.debug("[COOKIE] Using NextAuth cookies for tRPC request");
         } else {
-          console.warn("[WARNING] No cookies available for tRPC request");
+          logger.warn("[WARNING] No cookies available for tRPC request");
         }
       }
 
@@ -96,9 +97,9 @@ export class TRPCClient {
       const sessionToken = this.nextAuth.getSessionToken();
       if (sessionToken) {
         config.headers["Authorization"] = `Bearer ${sessionToken}`;
-        console.log("Added Authorization header with session token");
+        logger.debug("Added Authorization header with session token");
       } else {
-        console.warn(
+        logger.warn(
           "[WARNING] No session token available for Authorization header",
         );
       }
@@ -107,11 +108,11 @@ export class TRPCClient {
       const csrfToken = this.nextAuth.getCookies().csrfToken;
       if (csrfToken) {
         config.headers["X-CSRF-Token"] = csrfToken;
-        console.log("Added CSRF token to tRPC request");
+        logger.debug("Added CSRF token to tRPC request");
       }
 
       // Log request details for debugging
-      console.log("[REQUEST] tRPC request details:", {
+      logger.debug("[REQUEST] tRPC request details:", {
         url: config.url,
         method: config.method?.toUpperCase(),
         hasCookies: !!cookieHeader,
@@ -125,7 +126,7 @@ export class TRPCClient {
 
     this.httpClient.interceptors.response.use(
       (response) => {
-        console.log("[SUCCESS] tRPC response received:", {
+        logger.debug("[SUCCESS] tRPC response received:", {
           status: response.status,
           statusText: response.statusText,
           hasData: !!response.data,
@@ -133,7 +134,7 @@ export class TRPCClient {
         return response;
       },
       async (error) => {
-        console.error("[ERROR] tRPC request failed:", {
+        logger.error("[ERROR] tRPC request failed:", {
           status: error.response?.status,
           statusText: error.response?.statusText,
           message: error.message,
@@ -141,21 +142,21 @@ export class TRPCClient {
         });
 
         if (error.response?.status === 401) {
-          console.error(
+          logger.error(
             "[BLOCKED] Authentication failed - NextAuth session may be expired",
           );
           throw new Error(
             "Authentication expired. Please re-authenticate with NextAuth cookies.",
           );
         } else if (error.response?.status === 403) {
-          console.error(
+          logger.error(
             "[BLOCKED] Access forbidden - insufficient permissions",
           );
           throw new Error(
             "Access forbidden. Check your permissions or re-authenticate.",
           );
         } else if (error.response?.status === 404) {
-          console.error("[BLOCKED] tRPC endpoint not found");
+          logger.error("[BLOCKED] tRPC endpoint not found");
           throw new Error("tRPC endpoint not found. The API may have changed.");
         }
 
@@ -176,30 +177,30 @@ export class TRPCClient {
     };
 
     try {
-      console.log(
+      logger.info(
         `[REQUEST] tRPC call: ${method}`,
         params ? `with params: ${JSON.stringify(params)}` : "without params",
       );
 
       // Log request headers for debugging
       const cookieHeader = this.allCookies || this.nextAuth.getCookieHeader();
-      console.log(
+      logger.debug(
         `[COOKIE] Request cookies: ${cookieHeader ? "present" : "missing"}`,
       );
 
       // Try GET approach first (query-based tRPC)
-      console.log("Trying GET approach...");
+      logger.debug("Trying GET approach...");
       try {
         const url = this.buildTRPCUrl(method, params);
-        console.log(`[URL] tRPC GET URL: ${url}`);
+        logger.debug(`[URL] tRPC GET URL: ${url}`);
 
         const getResponse = await this.httpClient.get<TRPCResponse<T>>(url);
-        console.log(
+        logger.debug(
           `[SUCCESS] tRPC ${method} GET response status: ${getResponse.status}`,
         );
 
         if (getResponse.data.error) {
-          console.error(
+          logger.error(
             `[ERROR] tRPC ${method} GET returned error:`,
             getResponse.data.error,
           );
@@ -208,18 +209,18 @@ export class TRPCClient {
           );
         }
 
-        console.log(`[SUCCESS] tRPC ${method} GET succeeded`);
+        logger.debug(`[SUCCESS] tRPC ${method} GET succeeded`);
         return getResponse.data.result as T;
       } catch (getError) {
-        console.log(`[WARNING] GET approach failed, trying POST approach...`);
-        console.log(
+        logger.debug(`[WARNING] GET approach failed, trying POST approach...`);
+        logger.debug(
           `[DEBUG] GET error details:`,
           getError instanceof Error ? getError.message : "Unknown error",
         );
 
         // Try POST approach (JSON-RPC style)
         const postUrl = method;
-        console.log(`[URL] tRPC POST URL: ${postUrl}`);
+        logger.debug(`[URL] tRPC POST URL: ${postUrl}`);
 
         const postResponse = await this.httpClient.post<TRPCResponse<T>>(
           postUrl,
@@ -231,12 +232,12 @@ export class TRPCClient {
           },
         );
 
-        console.log(
+        logger.debug(
           `[SUCCESS] tRPC ${method} POST response status: ${postResponse.status}`,
         );
 
         if (postResponse.data.error) {
-          console.error(
+          logger.error(
             `[ERROR] tRPC ${method} POST returned error:`,
             postResponse.data.error,
           );
@@ -245,11 +246,11 @@ export class TRPCClient {
           );
         }
 
-        console.log(`[SUCCESS] tRPC ${method} POST succeeded`);
+        logger.debug(`[SUCCESS] tRPC ${method} POST succeeded`);
         return postResponse.data.result as T;
       }
     } catch (error) {
-      console.error(`[ERROR] tRPC call failed for ${method}:`, {
+      logger.error(`[ERROR] tRPC call failed for ${method}:`, {
         message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       });
@@ -257,7 +258,7 @@ export class TRPCClient {
       // Enhanced axios error logging
       if (error && typeof error === "object" && "response" in error) {
         const axiosError = error as any;
-        console.error(`[DEBUG] tRPC ${method} Axios error details:`, {
+        logger.error(`[DEBUG] tRPC ${method} Axios error details:`, {
           status: axiosError.response?.status,
           statusText: axiosError.response?.statusText,
           headers: axiosError.response?.headers,
@@ -270,32 +271,32 @@ export class TRPCClient {
 
         // Check for specific error types
         if (axiosError.response?.status === 401) {
-          console.error(
+          logger.error(
             "[BLOCKED] tRPC 401 Unauthorized - session may be expired or invalid",
           );
         } else if (axiosError.response?.status === 403) {
-          console.error(
+          logger.error(
             "[BLOCKED] tRPC 403 Forbidden - insufficient permissions",
           );
         } else if (axiosError.response?.status === 404) {
-          console.error(
+          logger.error(
             "[BLOCKED] tRPC 404 Not Found - endpoint may not exist",
           );
         } else if (axiosError.response?.status >= 500) {
-          console.error("[BLOCKED] tRPC Server Error - N Lobby backend issue");
+          logger.error("[BLOCKED] tRPC Server Error - N Lobby backend issue");
         }
       } else if (error && typeof error === "object" && "code" in error) {
         const networkError = error as any;
         if (networkError.code === "ECONNREFUSED") {
-          console.error(
+          logger.error(
             "[NETWORK] Network Error: Connection refused - N Lobby may be down",
           );
         } else if (networkError.code === "ETIMEDOUT") {
-          console.error(
+          logger.error(
             "[TIMEOUT] Network Error: Request timeout - slow network or server overload",
           );
         } else if (networkError.code === "ENOTFOUND") {
-          console.error(
+          logger.error(
             "[NETWORK] Network Error: DNS lookup failed - check internet connection",
           );
         }
@@ -448,7 +449,7 @@ export class TRPCClient {
 
   // Health check method
   async healthCheck(): Promise<boolean> {
-    console.log("Running tRPC health check...");
+    logger.info("Running tRPC health check...");
 
     // Try multiple endpoints to verify connection
     const healthCheckMethods = [
@@ -459,12 +460,12 @@ export class TRPCClient {
 
     for (const { name, method } of healthCheckMethods) {
       try {
-        console.log(`Trying tRPC method: ${name}`);
+        logger.debug(`Trying tRPC method: ${name}`);
         await method();
-        console.log(`[SUCCESS] tRPC health check passed with method: ${name}`);
+        logger.info(`[SUCCESS] tRPC health check passed with method: ${name}`);
         return true;
       } catch (error) {
-        console.log(
+        logger.debug(
           `[ERROR] tRPC method ${name} failed:`,
           error instanceof Error ? error.message : "Unknown error",
         );
@@ -472,7 +473,7 @@ export class TRPCClient {
       }
     }
 
-    console.error("[ERROR] All tRPC health check methods failed");
+    logger.error("[ERROR] All tRPC health check methods failed");
     return false;
   }
 }

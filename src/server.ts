@@ -15,6 +15,7 @@ import { CONFIG } from "./config.js";
 import { BrowserAuth } from "./browser-auth.js";
 import { CredentialManager } from "./credential-manager.js";
 import { CalendarType } from "./types.js";
+import { logger } from "./logger.js";
 
 export class NLobbyMCPServer {
   private server: Server;
@@ -945,9 +946,9 @@ export class NLobbyMCPServer {
     try {
       const transport = new StdioServerTransport();
       await this.server.connect(transport);
-      console.error("N Lobby MCP Server started successfully");
+      logger.info("N Lobby MCP Server started successfully");
     } catch (error) {
-      console.error("Failed to start server:", error);
+      logger.error("Failed to start server:", error);
       process.exit(1);
     }
   }

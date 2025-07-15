@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from "axios";
 import * as cheerio from "cheerio";
 import { BrowserAuth } from "./browser-auth.js";
 import { CONFIG } from "./config.js";
+import { logger } from "./logger.js";
 import { NextAuthHandler } from "./nextauth.js";
 import { TRPCClient } from "./trpc-client.js";
 import { CredentialManager } from "./credential-manager.js";
@@ -72,14 +73,14 @@ export class NLobbyApi {
   }
 
   async getNews(): Promise<NLobbyAnnouncement[]> {
-    console.log("[INFO] Starting getNews with HTTP client...");
-    console.log(
+    logger.info("[INFO] Starting getNews with HTTP client...");
+    logger.info(
       "[STATUS] Current authentication status:",
       this.getCookieStatus(),
     );
 
     try {
-      console.log(
+      logger.info(
         "[INFO] Fetching news via HTTP client (same method as test_page_content)...",
       );
 
@@ -87,10 +88,10 @@ export class NLobbyApi {
       const news = this.parseNewsFromHtml(html);
 
       if (news && news.length > 0) {
-        console.log(`[SUCCESS] Retrieved ${news.length} news items from HTML`);
+        logger.info(`[SUCCESS] Retrieved ${news.length} news items from HTML`);
         return news;
       } else {
-        console.log("[WARNING] HTML scraping returned no data");
+        logger.info("[WARNING] HTML scraping returned no data");
 
         // Provide more detailed debugging information
         const debugInfo = `HTML scraping returned no data. Debug info:
@@ -110,7 +111,7 @@ Troubleshooting steps:
         throw new Error(debugInfo);
       }
     } catch (error) {
-      console.error("[ERROR] getNews failed:", error);
+      logger.error("[ERROR] getNews failed:", error);
 
       if (error instanceof Error) {
         throw error; // Re-throw our detailed error
@@ -123,25 +124,25 @@ Troubleshooting steps:
   }
 
   async getNewsDetail(newsId: string): Promise<NLobbyNewsDetail> {
-    console.log(`[INFO] Fetching news detail for ID: ${newsId}`);
-    console.log(
+    logger.info(`[INFO] Fetching news detail for ID: ${newsId}`);
+    logger.info(
       "[STATUS] Current authentication status:",
       this.getCookieStatus(),
     );
 
     try {
       const newsUrl = `/news/${newsId}`;
-      console.log(`[INFO] Fetching news detail from: ${newsUrl}`);
+      logger.info(`[INFO] Fetching news detail from: ${newsUrl}`);
 
       const html = await this.fetchRenderedHtml(newsUrl);
-      console.log(
+      logger.info(
         `[SUCCESS] Retrieved HTML for news ${newsId}: ${html.length} characters`,
       );
 
       const newsDetail = this.parseNewsDetailFromHtml(html, newsId);
 
       if (newsDetail) {
-        console.log(`[SUCCESS] Parsed news detail: ${newsDetail.title}`);
+        logger.info(`[SUCCESS] Parsed news detail: ${newsDetail.title}`);
         return newsDetail;
       } else {
         throw new Error(
@@ -149,7 +150,7 @@ Troubleshooting steps:
         );
       }
     } catch (error) {
-      console.error(`[ERROR] getNewsDetail failed for ID ${newsId}:`, error);
+      logger.error(`[ERROR] getNewsDetail failed for ID ${newsId}:`, error);
 
       if (error instanceof Error) {
         throw error;
@@ -166,21 +167,21 @@ Troubleshooting steps:
     newsId: string,
   ): NLobbyNewsDetail | null {
     try {
-      console.log("[INFO] Starting news detail HTML parsing...");
-      console.log(`[DATA] HTML length: ${html.length} characters`);
+      logger.info("[INFO] Starting news detail HTML parsing...");
+      logger.debug(`[DATA] HTML length: ${html.length} characters`);
 
       // Extract data from Next.js self.__next_f.push() calls
-      console.log(
+      logger.info(
         "[STEP1] Extracting data from Next.js self.__next_f.push() calls...",
       );
       const nextFPushMatches = html.match(/self\.__next_f\.push\((\[.*?\])\)/g);
 
       if (!nextFPushMatches || nextFPushMatches.length === 0) {
-        console.log("[ERROR] No self.__next_f.push() calls found in HTML");
+        logger.info("[ERROR] No self.__next_f.push() calls found in HTML");
         return null;
       }
 
-      console.log(
+      logger.info(
         `[SUCCESS] Found ${nextFPushMatches.length} self.__next_f.push() calls`,
       );
 
@@ -204,7 +205,7 @@ Troubleshooting steps:
             pushData[1].match(/^\d+:T\d+,?$/)
           ) {
             const refKey = pushData[1].replace(/,$/, "");
-            console.log(`[INFO] Found content reference: ${refKey}`);
+            logger.info(`[INFO] Found content reference: ${refKey}`);
 
             // Look for the actual content in the next push call
             if (i + 1 < nextFPushMatches.length) {
@@ -219,7 +220,7 @@ Troubleshooting steps:
                   typeof nextPushData[1] === "string"
                 ) {
                   contentReferences.set(refKey, nextPushData[1]);
-                  console.log(
+                  logger.info(
                     `[SUCCESS] Found content for reference ${refKey}: ${nextPushData[1].length} characters`,
                   );
                 }
@@ -243,7 +244,7 @@ Troubleshooting steps:
                 const foundNewsData =
                   this.searchForNewsDataInObject(parsedContent);
                 if (foundNewsData) {
-                  console.log(
+                  logger.info(
                     `[SUCCESS] Found news data in push call ${i + 1}`,
                   );
                   newsData = foundNewsData;
@@ -259,7 +260,7 @@ Troubleshooting steps:
       }
 
       if (!newsData) {
-        console.log("[ERROR] No news data found in any push call");
+        logger.info("[ERROR] No news data found in any push call");
         return null;
       }
 
@@ -269,7 +270,7 @@ Troubleshooting steps:
         for (const [refKey, content] of contentReferences) {
           if (newsData.description.includes(refKey)) {
             contentData = content;
-            console.log(
+            logger.info(
               `[SUCCESS] Found content data using reference ${refKey}`,
             );
             break;
@@ -281,7 +282,7 @@ Troubleshooting steps:
       if (!contentData && contentReferences.size > 0) {
         // Use the first content reference as fallback
         contentData = Array.from(contentReferences.values())[0];
-        console.log("[INFO] Using first available content as fallback");
+        logger.info("[INFO] Using first available content as fallback");
       }
 
       // Build the news detail object
@@ -304,12 +305,12 @@ Troubleshooting steps:
         url: `${CONFIG.nlobby.baseUrl}/news/${newsId}`,
       };
 
-      console.log(
+      logger.info(
         `[TARGET] Successfully parsed news detail: ${newsDetail.title}`,
       );
       return newsDetail;
     } catch (error) {
-      console.error("[ERROR] Error parsing news detail from HTML:", error);
+      logger.error("[ERROR] Error parsing news detail from HTML:", error);
       return null;
     }
   }
@@ -323,13 +324,13 @@ Troubleshooting steps:
       obj.title &&
       (obj.publishedAt || obj.description || obj.menuName)
     ) {
-      console.log(`[INFO] Found news object at path: ${path}`);
+      logger.info(`[INFO] Found news object at path: ${path}`);
       return obj;
     }
 
     // Check for "news" property
     if (obj.news && typeof obj.news === "object") {
-      console.log(`[INFO] Found news property at path: ${path}.news`);
+      logger.info(`[INFO] Found news property at path: ${path}.news`);
       return obj.news;
     }
 
@@ -359,7 +360,7 @@ Troubleshooting steps:
 
       return decoded;
     } catch (error) {
-      console.warn("[WARNING] Failed to decode HTML content:", error);
+      logger.warn("[WARNING] Failed to decode HTML content:", error);
       return content;
     }
   }
@@ -369,7 +370,7 @@ Troubleshooting steps:
     dateRange?: CalendarDateRange,
   ): Promise<NLobbyScheduleItem[]> {
     try {
-      console.log(`[INFO] Fetching ${calendarType} calendar events...`);
+      logger.info(`[INFO] Fetching ${calendarType} calendar events...`);
 
       const events = await this.getGoogleCalendarEvents(
         calendarType,
@@ -378,12 +379,12 @@ Troubleshooting steps:
       const convertedEvents =
         this.convertGoogleCalendarEventsToScheduleItems(events);
 
-      console.log(
+      logger.info(
         `[SUCCESS] Retrieved ${convertedEvents.length} schedule items`,
       );
       return convertedEvents;
     } catch (error) {
-      console.error("[ERROR] Error fetching schedule:", error);
+      logger.error("[ERROR] Error fetching schedule:", error);
       throw new Error(
         `Failed to fetch ${calendarType} calendar: ${
           error instanceof Error ? error.message : "Unknown error"
@@ -397,7 +398,7 @@ Troubleshooting steps:
     dateRange?: CalendarDateRange,
   ): Promise<GoogleCalendarEvent[]> {
     try {
-      console.log(
+      logger.info(
         `[INFO] Fetching Google Calendar events for ${calendarType}...`,
       );
 
@@ -405,7 +406,7 @@ Troubleshooting steps:
       const defaultRange = this.getDefaultDateRange();
       const range = dateRange || defaultRange;
 
-      console.log(
+      logger.info(
         `[INFO] Date range: ${range.from.toISOString()} to ${range.to.toISOString()}`,
       );
 
@@ -415,7 +416,7 @@ Troubleshooting steps:
           ? "/api/trpc/calendar.getGoogleCalendarEvents"
           : "/api/trpc/calendar.getLobbyCalendarEvents";
 
-      console.log(`[URL] Using endpoint: ${endpoint}`);
+      logger.debug(`[URL] Using endpoint: ${endpoint}`);
 
       // Prepare query parameters
       const input = {
@@ -423,8 +424,8 @@ Troubleshooting steps:
         to: range.to.toISOString(),
       };
 
-      console.log(`[STATUS] Request input:`, input);
-      console.log(`[COOKIE] Authentication status:`, this.getCookieStatus());
+      logger.debug(`[STATUS] Request input:`, input);
+      logger.debug(`[COOKIE] Authentication status:`, this.getCookieStatus());
 
       const response = await this.httpClient.get<GoogleCalendarResponse>(
         endpoint,
@@ -438,26 +439,26 @@ Troubleshooting steps:
         },
       );
 
-      console.log(
+      logger.info(
         `[SUCCESS] Calendar API response: ${response.status} ${response.statusText}`,
       );
 
       // Enhanced debugging for response structure
-      console.log("[INFO] Response data analysis:");
-      console.log(`  - Response type: ${typeof response.data}`);
-      console.log(
+      logger.info("[INFO] Response data analysis:");
+      logger.info(`  - Response type: ${typeof response.data}`);
+      logger.info(
         `  - Response keys: ${response.data ? Object.keys(response.data) : "none"}`,
       );
-      console.log(
+      logger.info(
         `  - Has result: ${(response.data as any)?.result ? "yes" : "no"}`,
       );
-      console.log(
+      logger.info(
         `  - Has result.data: ${(response.data as any)?.result?.data ? "yes" : "no"}`,
       );
-      console.log(
+      logger.info(
         `  - Has result.data.gcal: ${(response.data as any)?.result?.data?.gcal ? "yes" : "no"}`,
       );
-      console.log(
+      logger.info(
         `  - Full response structure:`,
         JSON.stringify(response.data, null, 2),
       );
@@ -469,13 +470,13 @@ Troubleshooting steps:
       if (responseData?.result?.data?.gcal) {
         // Standard format (personal calendar)
         calendarEvents = responseData.result.data.gcal;
-        console.log(
+        logger.info(
           `[SUCCESS] Found events in standard gcal format: ${calendarEvents.length} events`,
         );
       } else if (responseData?.result?.data?.lcal) {
         // School calendar format (lobby calendar)
         calendarEvents = responseData.result.data.lcal;
-        console.log(
+        logger.info(
           `[SUCCESS] Found events in school lcal format: ${calendarEvents.length} events`,
         );
       } else if (
@@ -484,42 +485,42 @@ Troubleshooting steps:
       ) {
         // Alternative format where data is directly an array
         calendarEvents = responseData.result.data;
-        console.log(
+        logger.info(
           `[SUCCESS] Found events in alternative format (direct array): ${calendarEvents.length} events`,
         );
       } else if (responseData?.data?.gcal) {
         // Another possible format
         calendarEvents = responseData.data.gcal;
-        console.log(
+        logger.info(
           `[SUCCESS] Found events in simplified format: ${calendarEvents.length} events`,
         );
       } else if (responseData?.data && Array.isArray(responseData.data)) {
         // Direct data array format
         calendarEvents = responseData.data;
-        console.log(
+        logger.info(
           `[SUCCESS] Found events in direct data array format: ${calendarEvents.length} events`,
         );
       } else if (responseData?.gcal) {
         // Direct gcal format
         calendarEvents = responseData.gcal;
-        console.log(
+        logger.info(
           `[SUCCESS] Found events in direct gcal format: ${calendarEvents.length} events`,
         );
       } else if (Array.isArray(responseData)) {
         // Response is directly an array
         calendarEvents = responseData;
-        console.log(
+        logger.info(
           `[SUCCESS] Found events in direct array format: ${calendarEvents.length} events`,
         );
       } else {
-        console.log("[WARNING] No calendar data found in any expected format");
-        console.log(
+        logger.info("[WARNING] No calendar data found in any expected format");
+        logger.info(
           "[DATA] Available response keys:",
           responseData ? Object.keys(responseData) : "none",
         );
 
         // Show sample of response data for debugging
-        console.log(
+        logger.info(
           "[DATA] Response sample:",
           JSON.stringify(responseData).substring(0, 300),
         );
@@ -542,12 +543,12 @@ Troubleshooting steps:
       }
 
       const events = calendarEvents;
-      console.log(`[TARGET] Retrieved ${events.length} calendar events`);
+      logger.info(`[TARGET] Retrieved ${events.length} calendar events`);
 
       // Log sample event for debugging
       if (events.length > 0) {
         const sampleEvent = events[0];
-        console.log(`[LOG] Sample event:`, {
+        logger.info(`[LOG] Sample event:`, {
           id: sampleEvent.id,
           summary: sampleEvent.summary,
           start: sampleEvent.start,
@@ -557,11 +558,11 @@ Troubleshooting steps:
 
       return events;
     } catch (error) {
-      console.error(`[ERROR] Error fetching Google Calendar events:`, error);
+      logger.error(`[ERROR] Error fetching Google Calendar events:`, error);
 
       if (error && typeof error === "object" && "response" in error) {
         const axiosError = error as any;
-        console.error("[DEBUG] Calendar API error details:", {
+        logger.debug("[DEBUG] Calendar API error details:", {
           status: axiosError.response?.status,
           statusText: axiosError.response?.statusText,
           data: axiosError.response?.data,
@@ -749,7 +750,7 @@ Troubleshooting steps:
 
   // Backward compatibility method
   async getScheduleByDate(date?: string): Promise<NLobbyScheduleItem[]> {
-    console.log(
+    logger.info(
       `Using backward compatibility method for date: ${date || "today"}`,
     );
 
@@ -780,7 +781,7 @@ Troubleshooting steps:
     personal: { success: boolean; count: number; error?: string };
     school: { success: boolean; count: number; error?: string };
   }> {
-    console.log("[TEST] Testing both calendar endpoints...");
+    logger.info("[TEST] Testing both calendar endpoints...");
 
     const range = dateRange || this.getDefaultDateRange();
     const results: {
@@ -799,13 +800,13 @@ Troubleshooting steps:
       );
       results.personal.success = true;
       results.personal.count = personalEvents.length;
-      console.log(
+      logger.info(
         `[SUCCESS] Personal calendar: ${personalEvents.length} events`,
       );
     } catch (error) {
       results.personal.error =
         error instanceof Error ? error.message : "Unknown error";
-      console.error(
+      logger.error(
         "[ERROR] Personal calendar failed:",
         results.personal.error,
       );
@@ -819,14 +820,14 @@ Troubleshooting steps:
       );
       results.school.success = true;
       results.school.count = schoolEvents.length;
-      console.log(`[SUCCESS] School calendar: ${schoolEvents.length} events`);
+      logger.info(`[SUCCESS] School calendar: ${schoolEvents.length} events`);
     } catch (error) {
       results.school.error =
         error instanceof Error ? error.message : "Unknown error";
-      console.error("[ERROR] School calendar failed:", results.school.error);
+      logger.error("[ERROR] School calendar failed:", results.school.error);
     }
 
-    console.log("[TARGET] Calendar endpoint test summary:", results);
+    logger.info("[TARGET] Calendar endpoint test summary:", results);
     return results;
   }
 
@@ -847,7 +848,7 @@ Troubleshooting steps:
 
       return response.data.data || [];
     } catch (error) {
-      console.error("Error fetching learning resources:", error);
+      logger.error("Error fetching learning resources:", error);
       throw new Error(
         "Authentication required. Please use the set_cookies tool to provide valid NextAuth.js session cookies from N Lobby.",
       );
@@ -865,7 +866,7 @@ Troubleshooting steps:
 
       return response.data.data;
     } catch (error) {
-      console.error("Error fetching user info:", error);
+      logger.error("Error fetching user info:", error);
       throw new Error(
         "Authentication required. Please use the set_cookies tool to provide valid NextAuth.js session cookies from N Lobby.",
       );
@@ -896,10 +897,10 @@ Troubleshooting steps:
           );
 
           if (hasNewsProperties) {
-            console.log(
+            logger.info(
               `[INFO] Found potential news array at path: ${path}, length: ${obj.length}`,
             );
-            console.log(
+            logger.info(
               `[INFO] Sample item properties:`,
               Object.keys(firstItem),
             );
@@ -929,7 +930,7 @@ Troubleshooting steps:
       const searchPath = path ? `${path}.${key}` : key;
 
       if (priorityKeys.includes(key.toLowerCase())) {
-        console.log(`[INFO] Searching priority key: ${searchPath}`);
+        logger.info(`[INFO] Searching priority key: ${searchPath}`);
       }
 
       const foundArrays = this.searchForNewsInData(value, searchPath);
@@ -941,17 +942,17 @@ Troubleshooting steps:
 
   private parseAnnouncementsWithCheerio(html: string): NLobbyAnnouncement[] {
     try {
-      console.log("[TARGET] Starting Cheerio-based DOM parsing...");
+      logger.info("[TARGET] Starting Cheerio-based DOM parsing...");
       const $ = cheerio.load(html);
 
       // Find the second div[role='presentation'] which contains the DataGrid content
       const presentationDivs = $('div[role="presentation"]');
-      console.log(
+      logger.info(
         `[INFO] Found ${presentationDivs.length} div[role="presentation"] elements`,
       );
 
       if (presentationDivs.length < 2) {
-        console.log(
+        logger.info(
           '[WARNING] Less than 2 div[role="presentation"] elements found',
         );
         return [];
@@ -959,11 +960,11 @@ Troubleshooting steps:
 
       // Get the second div[role='presentation'] (index 1)
       const dataGridContent = $(presentationDivs[1]);
-      console.log('[SUCCESS] Located second div[role="presentation"] element');
+      logger.info('[SUCCESS] Located second div[role="presentation"] element');
 
       // Find all rows in the DataGrid
       const rows = dataGridContent.find('div[role="row"]');
-      console.log(`[INFO] Found ${rows.length} DataGrid rows`);
+      logger.info(`[INFO] Found ${rows.length} DataGrid rows`);
 
       const announcements: NLobbyAnnouncement[] = [];
 
@@ -973,7 +974,7 @@ Troubleshooting steps:
           const rowId = $row.attr("data-id");
 
           if (!rowId) {
-            console.log(
+            logger.info(
               `[WARNING] Row ${index} has no data-id attribute, skipping`,
             );
             return; // continue to next row
@@ -981,7 +982,7 @@ Troubleshooting steps:
 
           // Extract data from each gridcell
           const cells = $row.find('div[role="gridcell"]');
-          console.log(
+          logger.info(
             `[STATUS] Row ${rowId}: Found ${cells.length} grid cells`,
           );
 
@@ -1068,26 +1069,26 @@ Troubleshooting steps:
             };
 
             announcements.push(announcement);
-            console.log(
+            logger.info(
               `[SUCCESS] Added announcement: ${title.substring(0, 50)}...`,
             );
           } else {
-            console.log(`[WARNING] Row ${rowId}: No title found, skipping`);
+            logger.info(`[WARNING] Row ${rowId}: No title found, skipping`);
           }
         } catch (rowError) {
-          console.error(
+          logger.error(
             `[ERROR] Error parsing row ${index}:`,
             rowError instanceof Error ? rowError.message : "Unknown error",
           );
         }
       });
 
-      console.log(
+      logger.info(
         `[TARGET] Cheerio parsing completed: ${announcements.length} news items extracted`,
       );
       return announcements;
     } catch (error) {
-      console.error(
+      logger.error(
         "[ERROR] Cheerio parsing failed:",
         error instanceof Error ? error.message : "Unknown error",
       );
@@ -1099,17 +1100,17 @@ Troubleshooting steps:
     const announcements: NLobbyAnnouncement[] = [];
 
     try {
-      console.log("[INFO] Starting HTML parsing...");
-      console.log(`[DATA] HTML length: ${html.length} characters`);
+      logger.info("[INFO] Starting HTML parsing...");
+      logger.debug(`[DATA] HTML length: ${html.length} characters`);
 
       // **PRIORITY 1**: Extract data from Next.js self.__next_f.push() calls
-      console.log(
+      logger.info(
         "[STEP1] Extracting data from Next.js self.__next_f.push() calls...",
       );
       const nextFPushMatches = html.match(/self\.__next_f\.push\((\[.*?\])\)/g);
 
       if (nextFPushMatches && nextFPushMatches.length > 0) {
-        console.log(
+        logger.info(
           `[SUCCESS] Found ${nextFPushMatches.length} self.__next_f.push() calls`,
         );
 
@@ -1123,7 +1124,7 @@ Troubleshooting steps:
             if (!jsonMatch) continue;
 
             const pushData = JSON.parse(jsonMatch[1]);
-            console.log(
+            logger.info(
               `[INFO] Push call ${i + 1}: Array length ${pushData.length}, types: [${pushData.map((item: any) => typeof item).join(", ")}]`,
             );
 
@@ -1134,7 +1135,7 @@ Troubleshooting steps:
               // Check if string starts with number and colon (e.g., "5:...")
               const prefixMatch = stringData.match(/^(\d+):(.*)/);
               if (prefixMatch) {
-                console.log(
+                logger.info(
                   `[INFO] Push call ${i + 1}: Found prefixed data with prefix "${prefixMatch[1]}"`,
                 );
 
@@ -1143,7 +1144,7 @@ Troubleshooting steps:
                   const actualJsonString = prefixMatch[2];
                   const parsedContent = JSON.parse(actualJsonString);
 
-                  console.log(
+                  logger.info(
                     `[INFO] Push call ${i + 1}: Parsed content type: ${typeof parsedContent}, isArray: ${Array.isArray(parsedContent)}`,
                   );
 
@@ -1158,7 +1159,7 @@ Troubleshooting steps:
                         typeof item[3] === "object"
                       ) {
                         const componentData = item[3];
-                        console.log(
+                        logger.info(
                           `[INFO] Push call ${i + 1}, item ${j}: Component data keys: [${Object.keys(componentData).join(", ")}]`,
                         );
 
@@ -1167,7 +1168,7 @@ Troubleshooting steps:
                           componentData.news &&
                           Array.isArray(componentData.news)
                         ) {
-                          console.log(
+                          logger.info(
                             `[SUCCESS] Found news array in push call ${i + 1}, item ${j}: ${componentData.news.length} items`,
                           );
 
@@ -1181,7 +1182,7 @@ Troubleshooting steps:
                                 firstNews.title ||
                                 firstNews.microCmsId)
                             ) {
-                              console.log(
+                              logger.info(
                                 `[TARGET] Validated news data structure in push call ${i + 1}`,
                               );
                               return this.transformNewsToAnnouncements(
@@ -1194,7 +1195,7 @@ Troubleshooting steps:
                     }
                   }
                 } catch (parseError) {
-                  console.log(
+                  logger.info(
                     `[WARNING] Failed to parse prefixed JSON in push call ${i + 1}:`,
                     parseError instanceof Error
                       ? parseError.message
@@ -1210,13 +1211,13 @@ Troubleshooting steps:
                     `push_call_${i + 1}_fallback`,
                   );
                   if (foundNews && foundNews.length > 0) {
-                    console.log(
+                    logger.info(
                       `[SUCCESS] Found ${foundNews.length} news items in push call ${i + 1} (fallback)`,
                     );
                     return this.transformNewsToAnnouncements(foundNews);
                   }
                 } catch (innerParseError) {
-                  console.log(
+                  logger.info(
                     `[WARNING] Failed to parse inner JSON in push call ${i + 1}:`,
                     innerParseError instanceof Error
                       ? innerParseError.message
@@ -1232,36 +1233,36 @@ Troubleshooting steps:
               `push_call_${i + 1}_direct`,
             );
             if (foundNews && foundNews.length > 0) {
-              console.log(
+              logger.info(
                 `[SUCCESS] Found ${foundNews.length} news items directly in push call ${i + 1}`,
               );
               return this.transformNewsToAnnouncements(foundNews);
             }
           } catch (e) {
-            console.log(
+            logger.info(
               `[WARNING] Failed to parse push call ${i + 1}:`,
               e instanceof Error ? e.message : "Unknown error",
             );
           }
         }
       } else {
-        console.log("[WARNING] No self.__next_f.push() calls found in HTML");
+        logger.info("[WARNING] No self.__next_f.push() calls found in HTML");
       }
 
       // **FALLBACK 1**: Direct DOM parsing using Cheerio as fallback...
-      console.log("[STEP2] Attempting DOM parsing with Cheerio as fallback...");
+      logger.info("[STEP2] Attempting DOM parsing with Cheerio as fallback...");
       const cheerioAnnouncements = this.parseAnnouncementsWithCheerio(html);
       if (cheerioAnnouncements && cheerioAnnouncements.length > 0) {
-        console.log(
+        logger.info(
           `[SUCCESS] Cheerio DOM parsing successful: ${cheerioAnnouncements.length} news items found`,
         );
         return cheerioAnnouncements;
       } else {
-        console.log("[WARNING] Cheerio DOM parsing returned no results");
+        logger.info("[WARNING] Cheerio DOM parsing returned no results");
       }
 
       // Second priority: Extract data from Next.js __NEXT_DATA__
-      console.log("[STEP2] Trying to extract data from __NEXT_DATA__...");
+      logger.info("[STEP2] Trying to extract data from __NEXT_DATA__...");
       const nextDataMatches = [
         html.match(/window\.__NEXT_DATA__\s*=\s*({.*?})\s*(?:;|<\/script>)/s),
         html.match(/<script id="__NEXT_DATA__"[^>]*>([^<]*)<\/script>/s),
@@ -1273,25 +1274,25 @@ Troubleshooting steps:
           try {
             const jsonData = nextDataMatch[1] || nextDataMatch[0];
             const nextData = JSON.parse(jsonData);
-            console.log(
+            logger.info(
               "[SUCCESS] Found __NEXT_DATA__, analyzing structure...",
             );
-            console.log("[INFO] Keys in __NEXT_DATA__:", Object.keys(nextData));
+            logger.info("[INFO] Keys in __NEXT_DATA__:", Object.keys(nextData));
 
             const foundNews = this.searchForNewsInData(
               nextData,
               "__NEXT_DATA__",
             );
             if (foundNews && foundNews.length > 0) {
-              console.log(
+              logger.info(
                 `[SUCCESS] Found ${foundNews.length} news items in __NEXT_DATA__`,
               );
               return this.transformNewsToAnnouncements(foundNews);
             }
 
-            console.log("[WARNING] No news data found in __NEXT_DATA__");
+            logger.info("[WARNING] No news data found in __NEXT_DATA__");
           } catch (e) {
-            console.log(
+            logger.info(
               "[WARNING] Failed to parse __NEXT_DATA__:",
               e instanceof Error ? e.message : "Unknown error",
             );
@@ -1300,11 +1301,11 @@ Troubleshooting steps:
       }
 
       if (!nextDataMatches.some((match) => match)) {
-        console.log("[WARNING] __NEXT_DATA__ not found in HTML");
+        logger.info("[WARNING] __NEXT_DATA__ not found in HTML");
       }
 
       // Third priority: Extract from React component inline JSON data
-      console.log("[STEP3] Trying to extract from React component data...");
+      logger.info("[STEP3] Trying to extract from React component data...");
       const reactDataPatterns = [
         /"news":\s*(\[.*?\])/g,
         /"announcements":\s*(\[.*?\])/g,
@@ -1315,7 +1316,7 @@ Troubleshooting steps:
       for (const pattern of reactDataPatterns) {
         const matches = Array.from(html.matchAll(pattern));
         if (matches.length > 0) {
-          console.log(
+          logger.info(
             `[INFO] Found ${matches.length} matches for pattern: ${pattern.source}`,
           );
           for (const match of matches) {
@@ -1327,7 +1328,7 @@ Troubleshooting steps:
                   Array.isArray(newsData) &&
                   newsData.length > 0
                 ) {
-                  console.log(
+                  logger.info(
                     `[SUCCESS] Found React component data with ${newsData.length} items`,
                   );
 
@@ -1336,7 +1337,7 @@ Troubleshooting steps:
                     "react_component",
                   );
                   if (foundNews && foundNews.length > 0) {
-                    console.log(
+                    logger.info(
                       `[SUCCESS] Confirmed news-like data structure with ${foundNews.length} items`,
                     );
                     return this.transformNewsToAnnouncements(foundNews);
@@ -1344,7 +1345,7 @@ Troubleshooting steps:
                 }
               }
             } catch (e) {
-              console.log(
+              logger.info(
                 "[WARNING] Failed to parse React data:",
                 e instanceof Error ? e.message : "Unknown error",
               );
@@ -1354,7 +1355,7 @@ Troubleshooting steps:
       }
 
       // Fourth priority: Simple HTML pattern extraction as fallback
-      console.log(
+      logger.info(
         "[STEP4] Trying simple HTML element extraction as fallback...",
       );
 
@@ -1371,7 +1372,7 @@ Troubleshooting steps:
       for (const pattern of simplePatterns) {
         const matches = Array.from(html.matchAll(pattern));
         if (matches.length > 0) {
-          console.log(
+          logger.info(
             `[INFO] Found ${matches.length} matches for simple pattern`,
           );
           for (const match of matches) {
@@ -1386,7 +1387,7 @@ Troubleshooting steps:
                 const possibleData = JSON.parse(decoded);
 
                 if (Array.isArray(possibleData) && possibleData.length > 0) {
-                  console.log(
+                  logger.info(
                     `[SUCCESS] Found simple pattern data with ${possibleData.length} items`,
                   );
 
@@ -1395,7 +1396,7 @@ Troubleshooting steps:
                     "simple_pattern",
                   );
                   if (foundNews && foundNews.length > 0) {
-                    console.log(
+                    logger.info(
                       `[SUCCESS] Confirmed news data in simple pattern with ${foundNews.length} items`,
                     );
                     return this.transformNewsToAnnouncements(foundNews);
@@ -1409,27 +1410,27 @@ Troubleshooting steps:
         }
       }
     } catch (error) {
-      console.error("[ERROR] Error parsing news from HTML:", error);
+      logger.error("[ERROR] Error parsing news from HTML:", error);
     }
 
     // If no data was found through any method, log detailed information for debugging
-    console.log("[WARNING] No news data found through any parsing method");
-    console.log("[INFO] HTML analysis summary:");
-    console.log(
+    logger.info("[WARNING] No news data found through any parsing method");
+    logger.info("[INFO] HTML analysis summary:");
+    logger.info(
       `  - self.__next_f.push() calls: ${html.includes("self.__next_f.push(") ? "found" : "not found"}`,
     );
-    console.log(
+    logger.info(
       `  - __NEXT_DATA__: ${html.includes("__NEXT_DATA__") ? "found" : "not found"}`,
     );
-    console.log(
+    logger.info(
       `  - "news" keyword: ${html.includes('"news"') ? "found" : "not found"}`,
     );
-    console.log(
+    logger.info(
       `  - "announcements" keyword: ${html.includes('"announcements"') ? "found" : "not found"}`,
     );
 
     // Return empty array instead of null to ensure consistency
-    console.log(
+    logger.info(
       `[STATUS] Final result: ${announcements.length} news items extracted`,
     );
     return announcements;
@@ -1437,11 +1438,11 @@ Troubleshooting steps:
 
   private async fetchRenderedHtml(url: string): Promise<string> {
     try {
-      console.log(
+      logger.info(
         "[NETWORK] Fetching HTML using HTTP client (proven method)...",
       );
-      console.log(`[URL] URL: ${CONFIG.nlobby.baseUrl + url}`);
-      console.log(
+      logger.debug(`[URL] URL: ${CONFIG.nlobby.baseUrl + url}`);
+      logger.info(
         "[COOKIE] Cookies:",
         this.httpClient.defaults.headers.Cookie ? "present" : "missing",
       );
@@ -1464,13 +1465,13 @@ Troubleshooting steps:
         withCredentials: true,
       });
 
-      console.log(
+      logger.info(
         `[SUCCESS] HTTP response: ${response.status} ${response.statusText}`,
       );
-      console.log(
+      logger.info(
         `[DATA] Content length: ${response.data?.length || "unknown"}`,
       );
-      console.log(
+      logger.info(
         `[DATA] Content type: ${response.headers["content-type"] || "unknown"}`,
       );
 
@@ -1483,14 +1484,14 @@ Troubleshooting steps:
           lowerContent.includes("ログイン") ||
           lowerContent.includes("login")
         ) {
-          console.warn(
+          logger.warn(
             "[WARNING] WARNING: Page contains login keywords - authentication may have failed",
           );
         } else if (
           lowerContent.includes("news") ||
           lowerContent.includes("お知らせ")
         ) {
-          console.log("[SUCCESS] Page appears to contain news content");
+          logger.info("[SUCCESS] Page appears to contain news content");
         }
 
         if (
@@ -1500,7 +1501,7 @@ Troubleshooting steps:
           throw new Error("Access denied - authentication failed");
         }
 
-        console.log(
+        logger.info(
           `[TARGET] HTML retrieved successfully: ${html.length} characters`,
         );
         return html;
@@ -1510,14 +1511,14 @@ Troubleshooting steps:
         );
       }
     } catch (error) {
-      console.error(
+      logger.error(
         "[ERROR] HTTP fetch error:",
         error instanceof Error ? error.message : "Unknown error",
       );
 
       if (error && typeof error === "object" && "response" in error) {
         const axiosError = error as any;
-        console.error("[DEBUG] HTTP Error Details:", {
+        logger.debug("[DEBUG] HTTP Error Details:", {
           status: axiosError.response?.status,
           statusText: axiosError.response?.statusText,
           url: axiosError.config?.url,
@@ -1531,45 +1532,45 @@ Troubleshooting steps:
 
   setCookies(cookies: string): void {
     if (!cookies || cookies.trim() === "") {
-      console.warn("[WARNING] Empty cookies provided to setCookies");
+      logger.warn("[WARNING] Empty cookies provided to setCookies");
       return;
     }
 
-    console.log("[COOKIE] Setting cookies for all clients...");
-    console.log(`[SIZE] Cookie string length: ${cookies.length}`);
+    logger.debug("[COOKIE] Setting cookies for all clients...");
+    logger.debug(`[SIZE] Cookie string length: ${cookies.length}`);
 
     // Set cookies for HTTP client
     this.httpClient.defaults.headers.Cookie = cookies;
-    console.log("[SUCCESS] HTTP client cookies set");
+    logger.info("[SUCCESS] HTTP client cookies set");
 
     // Set cookies for NextAuth handler
     this.nextAuth.setCookies(cookies);
-    console.log("[SUCCESS] NextAuth cookies set");
+    logger.info("[SUCCESS] NextAuth cookies set");
 
     // Set cookies for tRPC client
     this.trpcClient.setAllCookies(cookies);
-    console.log("[SUCCESS] tRPC client cookies set");
+    logger.info("[SUCCESS] tRPC client cookies set");
 
     // Verify all cookies are set correctly
     const httpCookies = this.httpClient.defaults.headers.Cookie;
     const nextAuthAuthenticated = this.nextAuth.isAuthenticated();
     const trpcCookies = (this.trpcClient as any).allCookies;
 
-    console.log("[INFO] Cookie verification:");
-    console.log(
+    logger.info("[INFO] Cookie verification:");
+    logger.info(
       `  HTTP client: ${httpCookies ? "[SUCCESS] present" : "[ERROR] missing"}`,
     );
-    console.log(
+    logger.info(
       `  NextAuth: ${nextAuthAuthenticated ? "[SUCCESS] authenticated" : "[ERROR] not authenticated"}`,
     );
-    console.log(
+    logger.info(
       `  tRPC client: ${trpcCookies ? "[SUCCESS] present" : "[ERROR] missing"}`,
     );
 
     if (httpCookies && nextAuthAuthenticated && trpcCookies) {
-      console.log("[SUCCESS] All clients successfully configured with cookies");
+      logger.info("[SUCCESS] All clients successfully configured with cookies");
     } else {
-      console.error(
+      logger.error(
         "[ERROR] Cookie synchronization failed - some clients missing cookies",
       );
     }
@@ -1805,9 +1806,9 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       },
     ];
 
-    console.log("[INFO] Trying multiple tRPC endpoints...");
-    console.log(`[STATUS] Known: There are 67 news items available`);
-    console.log(
+    logger.info("[INFO] Trying multiple tRPC endpoints...");
+    logger.debug(`[STATUS] Known: There are 67 news items available`);
+    logger.info(
       `[STATUS] Testing ${endpoints.length} different endpoint configurations`,
     );
 
@@ -1821,7 +1822,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
     for (let i = 0; i < endpoints.length; i++) {
       const endpoint = endpoints[i];
-      console.log(
+      logger.info(
         `[REQUEST] [${i + 1}/${endpoints.length}] Attempting tRPC endpoint: ${endpoint.name}`,
       );
 
@@ -1831,8 +1832,8 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
         const endTime = Date.now();
         const duration = endTime - startTime;
 
-        console.log(`[TIMING] ${endpoint.name} responded in ${duration}ms`);
-        console.log(
+        logger.debug(`[TIMING] ${endpoint.name} responded in ${duration}ms`);
+        logger.info(
           `[INFO] Response type: ${typeof data}, isArray: ${Array.isArray(data)}`,
         );
 
@@ -1841,10 +1842,10 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
         }
 
         if (data && Array.isArray(data) && data.length > 0) {
-          console.log(
+          logger.info(
             `[SUCCESS] SUCCESS: tRPC endpoint ${endpoint.name} returned ${data.length} items`,
           );
-          console.log(
+          logger.info(
             `[TARGET] Sample item structure:`,
             data[0] ? Object.keys(data[0]) : "empty",
           );
@@ -1855,7 +1856,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
           });
           return data;
         } else if (data && Array.isArray(data) && data.length === 0) {
-          console.log(
+          logger.info(
             `[WARNING] tRPC endpoint ${endpoint.name} returned empty array (valid but no data)`,
           );
           triedEndpoints.push({
@@ -1865,7 +1866,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
           });
           // Continue trying other endpoints, don't return empty array yet
         } else if (data && typeof data === "object") {
-          console.log(
+          logger.info(
             `[INFO] tRPC endpoint ${endpoint.name} returned object:`,
             Object.keys(data),
           );
@@ -1878,14 +1879,14 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
           // Check if object contains array properties
           for (const key of Object.keys(data)) {
             if (Array.isArray(data[key]) && data[key].length > 0) {
-              console.log(
+              logger.info(
                 `[SUCCESS] Found array in object property '${key}' with ${data[key].length} items`,
               );
               return data[key];
             }
           }
         } else {
-          console.log(
+          logger.info(
             `[WARNING] tRPC endpoint ${endpoint.name} returned unexpected data:`,
             typeof data,
             data,
@@ -1899,7 +1900,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       } catch (error) {
         const errorMsg =
           error instanceof Error ? error.message : "Unknown error";
-        console.error(
+        logger.error(
           `[ERROR] tRPC endpoint ${endpoint.name} failed: ${errorMsg}`,
         );
         triedEndpoints.push({
@@ -1914,7 +1915,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
           const status = axiosError.response?.status;
           const statusText = axiosError.response?.statusText;
 
-          console.error(`[DEBUG] ${endpoint.name} HTTP Error:`, {
+          logger.error(`[DEBUG] ${endpoint.name} HTTP Error:`, {
             status,
             statusText,
             url: axiosError.config?.url,
@@ -1925,20 +1926,20 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
           // Specific error analysis
           if (status === 404) {
-            console.log(
+            logger.info(
               `[LOG] ${endpoint.name}: Endpoint not found (expected for non-existent endpoints)`,
             );
           } else if (status === 401) {
-            console.log(
+            logger.info(
               `[LOG] ${endpoint.name}: Authentication failed (this shouldn't happen)`,
             );
             break; // Stop trying if auth fails
           } else if (status === 403) {
-            console.log(
+            logger.info(
               `[LOG] ${endpoint.name}: Access forbidden (permissions issue)`,
             );
           } else if (status >= 500) {
-            console.log(
+            logger.info(
               `[LOG] ${endpoint.name}: Server error (try again later)`,
             );
           }
@@ -1949,17 +1950,17 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     }
 
     // Summary of all attempts
-    console.log("\n[STATUS] tRPC Endpoint Test Summary:");
-    console.log(
+    logger.info("\n[STATUS] tRPC Endpoint Test Summary:");
+    logger.info(
       `[SUCCESS] Successful endpoints: ${triedEndpoints.filter((e) => e.success).length}`,
     );
-    console.log(
+    logger.info(
       `[ERROR] Failed endpoints: ${triedEndpoints.filter((e) => !e.success).length}`,
     );
 
     const successfulEndpoints = triedEndpoints.filter((e) => e.success);
     if (successfulEndpoints.length > 0) {
-      console.log(
+      logger.info(
         "[TARGET] Successful endpoints:",
         successfulEndpoints
           .map((e) => `${e.name} (${e.responseType})`)
@@ -1968,18 +1969,18 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     }
 
     if (lastValidResponse !== null) {
-      console.log(
+      logger.info(
         "[INFO] Last valid response received, but it was not a news array",
       );
-      console.log("[INFO] Response type:", typeof lastValidResponse);
+      logger.info("[INFO] Response type:", typeof lastValidResponse);
       if (Array.isArray(lastValidResponse)) {
-        console.log("[INFO] Array length:", lastValidResponse.length);
+        logger.info("[INFO] Array length:", lastValidResponse.length);
       } else if (typeof lastValidResponse === "object") {
-        console.log("[INFO] Object keys:", Object.keys(lastValidResponse));
+        logger.info("[INFO] Object keys:", Object.keys(lastValidResponse));
       }
     }
 
-    console.log("[ERROR] All tRPC endpoints failed to return news array data");
+    logger.info("[ERROR] All tRPC endpoints failed to return news array data");
     return null;
   }
 
@@ -1988,7 +1989,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     action: string;
   } | null> {
     try {
-      console.log("[INFO] Extracting Next.js metadata from /news page...");
+      logger.info("[INFO] Extracting Next.js metadata from /news page...");
 
       const response = await this.httpClient.get("/news", {
         headers: {
@@ -2006,10 +2007,10 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
         withCredentials: true,
       });
 
-      console.log(
+      logger.info(
         `[SUCCESS] Metadata extraction response status: ${response.status}`,
       );
-      console.log(
+      logger.info(
         `[DATA] HTML length: ${typeof response.data === "string" ? response.data.length : "N/A"}`,
       );
 
@@ -2019,32 +2020,32 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       let routerState = null;
       let action = null;
 
-      console.log("[INFO] Searching for router state in meta tags...");
+      logger.info("[INFO] Searching for router state in meta tags...");
       // Try to extract from meta tags first
       const routerStateMatch = html.match(
         /<meta\s+name=["']next-router-state-tree["']\s+content=["']([^"']+)["']/i,
       );
       if (routerStateMatch) {
         routerState = decodeURIComponent(routerStateMatch[1]);
-        console.log("[SUCCESS] Found router state in meta tags");
+        logger.info("[SUCCESS] Found router state in meta tags");
       } else {
-        console.log("[WARNING] Router state not found in meta tags");
+        logger.info("[WARNING] Router state not found in meta tags");
       }
 
-      console.log("[INFO] Searching for action in meta tags...");
+      logger.info("[INFO] Searching for action in meta tags...");
       const actionMatch = html.match(
         /<meta\s+name=["']next-action["']\s+content=["']([^"']+)["']/i,
       );
       if (actionMatch) {
         action = actionMatch[1];
-        console.log("[SUCCESS] Found action in meta tags");
+        logger.info("[SUCCESS] Found action in meta tags");
       } else {
-        console.log("[WARNING] Action not found in meta tags");
+        logger.info("[WARNING] Action not found in meta tags");
       }
 
       // If not found in meta tags, try to extract from inline scripts
       if (!routerState || !action) {
-        console.log("[INFO] Searching in script tags...");
+        logger.info("[INFO] Searching in script tags...");
 
         // Look for Next.js router state in script tags
         const scriptMatches = html.match(
@@ -2052,27 +2053,27 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
         );
         if (scriptMatches) {
           try {
-            console.log("[INFO] Found __NEXT_DATA__, parsing...");
+            logger.info("[INFO] Found __NEXT_DATA__, parsing...");
             const nextData = JSON.parse(scriptMatches[1]);
             if (nextData.props?.pageProps?.__N_RSC) {
               // Extract router state from Next.js data
               const rscData = nextData.props.pageProps.__N_RSC;
               if (rscData.routerState) {
                 routerState = rscData.routerState;
-                console.log("[SUCCESS] Found router state in __NEXT_DATA__");
+                logger.info("[SUCCESS] Found router state in __NEXT_DATA__");
               }
             }
           } catch (e) {
-            console.log(
+            logger.info(
               "[WARNING] Could not parse __NEXT_DATA__:",
               e instanceof Error ? e.message : "Unknown error",
             );
           }
         } else {
-          console.log("[WARNING] __NEXT_DATA__ not found");
+          logger.info("[WARNING] __NEXT_DATA__ not found");
         }
 
-        console.log("[INFO] Searching for action in script content...");
+        logger.info("[INFO] Searching for action in script content...");
         // Look for action in script tags or Network panel patterns
         const actionScriptMatch =
           html.match(/['"](c[0-9a-f]{40,})['"]/) ||
@@ -2081,9 +2082,9 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
         if (actionScriptMatch) {
           action = actionScriptMatch[1];
-          console.log("[SUCCESS] Found action in script content");
+          logger.info("[SUCCESS] Found action in script content");
         } else {
-          console.log("[WARNING] Action not found in script content");
+          logger.info("[WARNING] Action not found in script content");
         }
       }
 
@@ -2091,12 +2092,12 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       if (!routerState) {
         routerState =
           "%5B%22%22%2C%7B%22children%22%3A%5B%22news%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%5D%7D%5D%7D%2Cnull%2Cnull%2Ctrue%5D";
-        console.log("[WARNING] Using fallback router state");
+        logger.info("[WARNING] Using fallback router state");
       }
 
       // If still no action found, try making a request to capture it from headers
       if (!action) {
-        console.log("[INFO] Trying preflight request to capture action...");
+        logger.info("[INFO] Trying preflight request to capture action...");
         try {
           // Make a preflight request to news page to capture action
           await this.httpClient.get("/news", {
@@ -2110,9 +2111,9 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
           // Check if error response contains action in headers
           if (preflightError.response?.headers?.["next-action"]) {
             action = preflightError.response.headers["next-action"];
-            console.log("[SUCCESS] Found action in preflight response headers");
+            logger.info("[SUCCESS] Found action in preflight response headers");
           } else {
-            console.log(
+            logger.info(
               "[WARNING] Action not found in preflight response headers",
             );
           }
@@ -2120,26 +2121,26 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       }
 
       if (routerState && action) {
-        console.log("[SUCCESS] Successfully extracted Next.js metadata");
-        console.log(`[STATUS] Router state length: ${routerState.length}`);
-        console.log(`[STATUS] Action: ${action}`);
+        logger.info("[SUCCESS] Successfully extracted Next.js metadata");
+        logger.debug(`[STATUS] Router state length: ${routerState.length}`);
+        logger.debug(`[STATUS] Action: ${action}`);
         return { routerState, action };
       } else {
-        console.log("[ERROR] Could not extract complete Next.js metadata", {
+        logger.info("[ERROR] Could not extract complete Next.js metadata", {
           routerState: Boolean(routerState),
           action: Boolean(action),
         });
         return null;
       }
     } catch (error) {
-      console.error("[ERROR] Error extracting Next.js metadata:", {
+      logger.error("[ERROR] Error extracting Next.js metadata:", {
         message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       });
 
       if (error && typeof error === "object" && "response" in error) {
         const axiosError = error as any;
-        console.error("[DEBUG] Metadata extraction Axios error:", {
+        logger.debug("[DEBUG] Metadata extraction Axios error:", {
           status: axiosError.response?.status,
           statusText: axiosError.response?.statusText,
           url: axiosError.config?.url,
@@ -2156,31 +2157,31 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
   private async fetchNewsViaRSC(): Promise<any[] | null> {
     try {
-      console.log("[INFO] Starting RSC approach...");
+      logger.info("[INFO] Starting RSC approach...");
 
       // Extract dynamic Next.js metadata
       const metadata = await this.extractNextJsMetadata();
 
       if (!metadata) {
-        console.log(
+        logger.info(
           "[WARNING] Could not extract Next.js metadata, skipping RSC approach",
         );
         return null;
       }
 
-      console.log("[SUCCESS] Next.js metadata extracted:", {
+      logger.info("[SUCCESS] Next.js metadata extracted:", {
         routerStateLength: metadata.routerState.length,
         actionLength: metadata.action.length,
       });
 
-      console.log("[REQUEST] Making RSC request with extracted metadata...");
+      logger.info("[REQUEST] Making RSC request with extracted metadata...");
 
       // React Server Components approach with dynamic values
       const rscId = Math.random().toString(36).substring(2, 7);
       const rscUrl = `/news?_rsc=${rscId}`;
 
-      console.log(`[URL] RSC URL: ${rscUrl}`);
-      console.log(
+      logger.debug(`[URL] RSC URL: ${rscUrl}`);
+      logger.info(
         "[COOKIE] RSC cookies:",
         this.httpClient.defaults.headers.Cookie ? "present" : "missing",
       );
@@ -2196,28 +2197,28 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
         withCredentials: true,
       });
 
-      console.log(`[SUCCESS] RSC response status: ${response.status}`);
-      console.log(`[DATA] RSC response data type: ${typeof response.data}`);
-      console.log(
+      logger.info(`[SUCCESS] RSC response status: ${response.status}`);
+      logger.debug(`[DATA] RSC response data type: ${typeof response.data}`);
+      logger.info(
         `[SIZE] RSC response length: ${typeof response.data === "string" ? response.data.length : "N/A"}`,
       );
 
       // Parse RSC response for news data
       const parsedData = this.parseRSCResponse(response.data);
-      console.log(
+      logger.info(
         `[TARGET] RSC parsed data: ${parsedData ? parsedData.length : 0} items`,
       );
 
       return parsedData;
     } catch (error) {
-      console.error("[ERROR] RSC fetch failed:", {
+      logger.error("[ERROR] RSC fetch failed:", {
         message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       });
 
       if (error && typeof error === "object" && "response" in error) {
         const axiosError = error as any;
-        console.error("[DEBUG] RSC Axios error details:", {
+        logger.debug("[DEBUG] RSC Axios error details:", {
           status: axiosError.response?.status,
           statusText: axiosError.response?.statusText,
           headers: axiosError.response?.headers,
@@ -2241,8 +2242,8 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
   private async fetchNewsViaHTML(): Promise<NLobbyAnnouncement[] | null> {
     try {
-      console.log("[INFO] Starting HTML fetch approach...");
-      console.log(
+      logger.info("[INFO] Starting HTML fetch approach...");
+      logger.info(
         "[COOKIE] HTML cookies:",
         this.httpClient.defaults.headers.Cookie ? "present" : "missing",
       );
@@ -2263,41 +2264,41 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
         withCredentials: true,
       });
 
-      console.log(`[SUCCESS] HTML response status: ${response.status}`);
-      console.log(`[DATA] HTML response type: ${typeof response.data}`);
-      console.log(
+      logger.info(`[SUCCESS] HTML response status: ${response.status}`);
+      logger.debug(`[DATA] HTML response type: ${typeof response.data}`);
+      logger.info(
         `[SIZE] HTML response length: ${typeof response.data === "string" ? response.data.length : "N/A"}`,
       );
 
       // Enhanced debugging - show actual HTML content samples
       if (typeof response.data === "string") {
-        console.log("[INFO] HTML Content Analysis:");
-        console.log(
+        logger.info("[INFO] HTML Content Analysis:");
+        logger.info(
           `  - Contains "self.__next_f.push(": ${response.data.includes("self.__next_f.push(")}`,
         );
-        console.log(
+        logger.info(
           `  - Contains "__NEXT_DATA__": ${response.data.includes("__NEXT_DATA__")}`,
         );
-        console.log(`  - Contains "news": ${response.data.includes("news")}`);
-        console.log(
+        logger.info(`  - Contains "news": ${response.data.includes("news")}`);
+        logger.info(
           `  - Contains "announcements": ${response.data.includes("announcements")}`,
         );
-        console.log(
+        logger.info(
           `  - Contains "ニュース": ${response.data.includes("ニュース")}`,
         );
-        console.log(
+        logger.info(
           `  - Contains "お知らせ": ${response.data.includes("お知らせ")}`,
         );
 
         // Show first 1000 characters for debugging
-        console.log("[DATA] HTML Content Sample (first 1000 chars):");
-        console.log(response.data.substring(0, 1000));
-        console.log("...");
+        logger.debug("[DATA] HTML Content Sample (first 1000 chars):");
+        logger.info(response.data.substring(0, 1000));
+        logger.info("...");
 
         // Show last 1000 characters for debugging
-        console.log("[DATA] HTML Content Sample (last 1000 chars):");
-        console.log("...");
-        console.log(
+        logger.debug("[DATA] HTML Content Sample (last 1000 chars):");
+        logger.info("...");
+        logger.info(
           response.data.substring(Math.max(0, response.data.length - 1000)),
         );
 
@@ -2308,7 +2309,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
           response.data.includes("sign-in") ||
           response.data.includes("auth")
         ) {
-          console.error(
+          logger.error(
             "[BLOCKED] Received login page instead of news page - session may be expired",
           );
           return null;
@@ -2319,24 +2320,24 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
           response.data.includes("Unauthorized") ||
           response.data.includes("Access Denied")
         ) {
-          console.error("[BLOCKED] Access denied - insufficient permissions");
+          logger.error("[BLOCKED] Access denied - insufficient permissions");
           return null;
         }
       }
 
       const parsedNews = this.parseNewsFromHtml(response.data);
-      console.log(`[TARGET] HTML parsed news: ${parsedNews.length} items`);
+      logger.info(`[TARGET] HTML parsed news: ${parsedNews.length} items`);
 
       return parsedNews;
     } catch (error) {
-      console.error("[ERROR] HTML fetch failed:", {
+      logger.error("[ERROR] HTML fetch failed:", {
         message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       });
 
       if (error && typeof error === "object" && "response" in error) {
         const axiosError = error as any;
-        console.error("[DEBUG] HTML Axios error details:", {
+        logger.debug("[DEBUG] HTML Axios error details:", {
           status: axiosError.response?.status,
           statusText: axiosError.response?.statusText,
           headers: axiosError.response?.headers,
@@ -2358,7 +2359,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
   }
 
   private transformNewsToAnnouncements(newsData: any[]): NLobbyAnnouncement[] {
-    console.log(
+    logger.info(
       `Transforming ${newsData.length} news items to announcements...`,
     );
 
@@ -2454,8 +2455,8 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
   private parseRSCResponse(rscData: string): any[] | null {
     try {
-      console.log("[INFO] Parsing RSC response...");
-      console.log(`[SIZE] RSC data length: ${rscData.length}`);
+      logger.info("[INFO] Parsing RSC response...");
+      logger.debug(`[SIZE] RSC data length: ${rscData.length}`);
 
       // RSC responses can be in different formats
       // Try multiple parsing approaches
@@ -2473,7 +2474,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       for (const pattern of jsonPatterns) {
         const matches = rscData.match(pattern);
         if (matches) {
-          console.log(
+          logger.info(
             `[INFO] Found ${matches.length} JSON matches for pattern: ${pattern.source}`,
           );
           for (const match of matches) {
@@ -2491,14 +2492,14 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
                   }
                 }
                 if (arrays.length > 0) {
-                  console.log(
+                  logger.info(
                     `[SUCCESS] Found ${arrays[0].length} items in RSC JSON`,
                   );
                   return arrays[0];
                 }
               }
             } catch (e) {
-              console.log(
+              logger.info(
                 `[WARNING] Failed to parse JSON match: ${e instanceof Error ? e.message : "Unknown error"}`,
               );
             }
@@ -2512,7 +2513,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       for (const pattern of arrayPatterns) {
         const matches = rscData.match(pattern);
         if (matches) {
-          console.log(`[INFO] Found ${matches.length} array matches`);
+          logger.info(`[INFO] Found ${matches.length} array matches`);
           for (const match of matches) {
             try {
               const arrayData = JSON.parse(match);
@@ -2527,14 +2528,14 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
                     firstItem.content ||
                     firstItem.publishedAt)
                 ) {
-                  console.log(
+                  logger.info(
                     `[SUCCESS] Found news array in RSC with ${arrayData.length} items`,
                   );
                   return arrayData;
                 }
               }
             } catch (e) {
-              console.log(
+              logger.info(
                 `[WARNING] Failed to parse array match: ${e instanceof Error ? e.message : "Unknown error"}`,
               );
             }
@@ -2545,7 +2546,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       // 3. Streamed RSC format (React Server Components streaming)
       const streamedMatches = rscData.match(/\d+:(.+?)(?=\n\d+:|$)/g);
       if (streamedMatches) {
-        console.log(
+        logger.info(
           `[INFO] Found ${streamedMatches.length} streamed RSC chunks`,
         );
         for (const chunk of streamedMatches) {
@@ -2557,7 +2558,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
                 content.includes("news") ||
                 content.includes("announcements")
               ) {
-                console.log(
+                logger.info(
                   `[INFO] Found news-related streamed chunk: ${content.substring(0, 100)}...`,
                 );
                 // Try to extract JSON from the chunk
@@ -2565,7 +2566,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
                 if (jsonMatch) {
                   const parsedData = JSON.parse(jsonMatch[0]);
                   if (parsedData && Array.isArray(parsedData.news)) {
-                    console.log(
+                    logger.info(
                       `[SUCCESS] Found news in streamed RSC with ${parsedData.news.length} items`,
                     );
                     return parsedData.news;
@@ -2574,24 +2575,24 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
               }
             }
           } catch (e) {
-            console.log(
+            logger.info(
               `[WARNING] Failed to parse streamed chunk: ${e instanceof Error ? e.message : "Unknown error"}`,
             );
           }
         }
       }
 
-      console.log("[WARNING] No valid news data found in RSC response");
+      logger.info("[WARNING] No valid news data found in RSC response");
       return null;
     } catch (error) {
-      console.error("[ERROR] Error parsing RSC response:", error);
+      logger.error("[ERROR] Error parsing RSC response:", error);
       return null;
     }
   }
 
   async healthCheck(): Promise<boolean> {
-    console.log("[INFO] Running N Lobby API health check...");
-    console.log("[STATUS] Authentication status:", this.getCookieStatus());
+    logger.info("[INFO] Running N Lobby API health check...");
+    logger.debug("[STATUS] Authentication status:", this.getCookieStatus());
 
     // Define health check tests in order of priority
     const healthCheckTests = [
@@ -2681,55 +2682,55 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     // Run health checks in order
     for (let i = 0; i < healthCheckTests.length; i++) {
       const test = healthCheckTests[i];
-      console.log(`[STEP${i + 1}] Testing ${test.name}...`);
+      logger.info(`[STEP${i + 1}] Testing ${test.name}...`);
 
       try {
         const result = await test.test();
         if (result) {
-          console.log(`[SUCCESS] ${test.name} passed`);
+          logger.info(`[SUCCESS] ${test.name} passed`);
 
           // If any of the first 3 tests pass, we're in good shape
           if (i < 3) {
-            console.log(
+            logger.info(
               "[SUCCESS] Health check passed - authentication and connectivity verified",
             );
             return true;
           }
 
           // If only basic connectivity works, warn but still pass
-          console.log(
+          logger.info(
             "[WARNING] Health check passed with limited functionality - authentication may be required",
           );
           return true;
         } else {
-          console.log(`[ERROR] ${test.name} failed`);
+          logger.info(`[ERROR] ${test.name} failed`);
         }
       } catch (error) {
-        console.log(
+        logger.info(
           `[ERROR] ${test.name} failed with error:`,
           error instanceof Error ? error.message : "Unknown error",
         );
       }
     }
 
-    console.log("[ERROR] All health check methods failed");
+    logger.info("[ERROR] All health check methods failed");
 
     // Final diagnostic
-    console.log("[INFO] Final diagnostic:");
+    logger.info("[INFO] Final diagnostic:");
     const hasHttpCookies = !!this.httpClient.defaults.headers.Cookie;
     const hasNextAuthCookies = this.nextAuth.isAuthenticated();
     const hasTrpcCookies = !!(this.trpcClient as any).allCookies;
 
     if (!hasHttpCookies && !hasNextAuthCookies && !hasTrpcCookies) {
-      console.log(
+      logger.info(
         "[ERROR] No authentication cookies found - run interactive_login first",
       );
     } else if (hasHttpCookies && hasNextAuthCookies && hasTrpcCookies) {
-      console.log(
+      logger.info(
         "[ERROR] Authentication cookies present but all endpoints failed - server or network issue",
       );
     } else {
-      console.log(
+      logger.info(
         "[ERROR] Partial authentication state - cookie synchronization issue",
       );
     }
@@ -2919,7 +2920,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     maxLength: number = 1000,
   ): Promise<string> {
     try {
-      console.log(`[INFO] Testing page content for ${endpoint}...`);
+      logger.info(`[INFO] Testing page content for ${endpoint}...`);
 
       const response = await this.httpClient.get(endpoint, {
         headers: {
@@ -2933,10 +2934,10 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
         timeout: 10000,
       });
 
-      console.log(
+      logger.info(
         `[SUCCESS] Page content retrieved: ${response.status} ${response.statusText}`,
       );
-      console.log(
+      logger.info(
         `[SIZE] Content length: ${response.data?.length || "unknown"}`,
       );
 
@@ -3008,7 +3009,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
         return `Non-string response received: ${typeof response.data}`;
       }
     } catch (error) {
-      console.error(
+      logger.error(
         `[ERROR] Failed to test page content for ${endpoint}:`,
         error,
       );
@@ -3024,14 +3025,14 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
   async testTrpcEndpoint(method: string, params?: any): Promise<any> {
     try {
-      console.log(`[INFO] Testing tRPC endpoint: ${method}`);
-      console.log(`[STATUS] Params:`, params);
-      console.log(`[COOKIE] Authentication status:`, this.getCookieStatus());
+      logger.info(`[INFO] Testing tRPC endpoint: ${method}`);
+      logger.debug(`[STATUS] Params:`, params);
+      logger.debug(`[COOKIE] Authentication status:`, this.getCookieStatus());
 
       const result = await this.trpcClient.call(method, params);
 
-      console.log(`[SUCCESS] tRPC endpoint ${method} succeeded`);
-      console.log(`[DATA] Result:`, result);
+      logger.info(`[SUCCESS] tRPC endpoint ${method} succeeded`);
+      logger.debug(`[DATA] Result:`, result);
 
       return {
         success: true,
@@ -3041,7 +3042,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      console.error(`[ERROR] tRPC endpoint ${method} failed:`, error);
+      logger.error(`[ERROR] tRPC endpoint ${method} failed:`, error);
 
       const errorInfo: any = {
         success: false,
@@ -3065,26 +3066,26 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
   }
 
   async getRequiredCourses(): Promise<NLobbyRequiredCourse[]> {
-    console.log("[INFO] Starting getRequiredCourses...");
-    console.log(
+    logger.info("[INFO] Starting getRequiredCourses...");
+    logger.info(
       "[STATUS] Current authentication status:",
       this.getCookieStatus(),
     );
 
     try {
-      console.log("[INFO] Fetching required courses via tRPC client...");
+      logger.info("[INFO] Fetching required courses via tRPC client...");
 
       // Call the known endpoint
       const response = await this.trpcClient.call(
         "requiredCourse.getRequiredCourses",
       );
 
-      console.log("[DEBUG] Raw response type:", typeof response);
-      console.log(
+      logger.debug("[DEBUG] Raw response type:", typeof response);
+      logger.info(
         "[DEBUG] Raw response keys:",
         response ? Object.keys(response) : "null",
       );
-      console.log(
+      logger.info(
         "[DEBUG] Full response structure:",
         JSON.stringify(response, null, 2),
       );
@@ -3094,14 +3095,14 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
       // Format 1: Expected format { result: { data: EducationData } }
       if (response && response.result && response.result.data) {
-        console.log(
+        logger.info(
           "[SUCCESS] Found data in expected format: response.result.data",
         );
         educationData = response.result.data;
       }
       // Format 2: Direct data format { data: EducationData }
       else if (response && response.data) {
-        console.log(
+        logger.info(
           "[SUCCESS] Found data in alternative format: response.data",
         );
         educationData = response.data;
@@ -3112,51 +3113,51 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
         response.educationProcessName &&
         response.termYears
       ) {
-        console.log(
+        logger.info(
           "[SUCCESS] Found data in direct format: response as EducationData",
         );
         educationData = response as EducationData;
       }
       // Format 4: Check if response is directly an array of courses
       else if (response && Array.isArray(response)) {
-        console.log("[SUCCESS] Found data as direct array of courses");
+        logger.info("[SUCCESS] Found data as direct array of courses");
         return response;
       }
       // Format 5: Check for other possible nested structures
       else if (response) {
-        console.log(
+        logger.info(
           "[INFO] Searching for education data in nested structures...",
         );
 
         // Search for educationProcessName in nested objects
         const searchResult = this.findEducationDataInObject(response);
         if (searchResult) {
-          console.log("[SUCCESS] Found education data in nested structure");
+          logger.info("[SUCCESS] Found education data in nested structure");
           educationData = searchResult;
         }
       }
 
       if (educationData) {
-        console.log(
+        logger.info(
           `[SUCCESS] Retrieved education data for: ${educationData.educationProcessName}`,
         );
-        console.log(
+        logger.info(
           `[INFO] Found ${educationData.termYears.length} term years`,
         );
 
         // Flatten all courses from all term years
         const allCourses = this.transformEducationDataToCourses(educationData);
-        console.log(`[SUCCESS] Total courses extracted: ${allCourses.length}`);
+        logger.info(`[SUCCESS] Total courses extracted: ${allCourses.length}`);
 
         return allCourses;
       } else {
-        console.log("[WARNING] Invalid response structure from tRPC endpoint");
-        console.log("[INFO] Response type:", typeof response);
-        console.log(
+        logger.info("[WARNING] Invalid response structure from tRPC endpoint");
+        logger.info("[INFO] Response type:", typeof response);
+        logger.info(
           "[INFO] Response structure:",
           response ? Object.keys(response) : "null",
         );
-        console.log(
+        logger.info(
           "[DEBUG] Full response for debugging:",
           JSON.stringify(response, null, 2),
         );
@@ -3167,7 +3168,7 @@ Response keys: ${response ? Object.keys(response).join(", ") : "none"}
 Please check the API documentation or contact support.`);
       }
     } catch (error) {
-      console.error("[ERROR] getRequiredCourses failed:", error);
+      logger.error("[ERROR] getRequiredCourses failed:", error);
 
       // Provide detailed error information
       if (error instanceof Error) {
@@ -3192,7 +3193,7 @@ Please check the API documentation or contact support.`);
       obj.termYears &&
       Array.isArray(obj.termYears)
     ) {
-      console.log(`[INFO] Found education data at path: ${path}`);
+      logger.info(`[INFO] Found education data at path: ${path}`);
       return obj as EducationData;
     }
 
@@ -3211,14 +3212,14 @@ Please check the API documentation or contact support.`);
   private transformEducationDataToCourses(
     educationData: EducationData,
   ): NLobbyRequiredCourse[] {
-    console.log(
+    logger.info(
       `[INFO] Transforming education data with ${educationData.termYears.length} term years...`,
     );
 
     const allCourses: NLobbyRequiredCourse[] = [];
 
     for (const termYear of educationData.termYears) {
-      console.log(
+      logger.info(
         `[INFO] Processing ${termYear.grade} (${termYear.termYear}) with ${termYear.courses.length} courses`,
       );
 
@@ -3245,13 +3246,13 @@ Please check the API documentation or contact support.`);
         };
 
         allCourses.push(enhancedCourse);
-        console.log(
+        logger.info(
           `[SUCCESS] Added course: ${course.subjectName} (${course.curriculumName}) - ${termYear.grade}`,
         );
       }
     }
 
-    console.log(`[TARGET] Total courses processed: ${allCourses.length}`);
+    logger.info(`[TARGET] Total courses processed: ${allCourses.length}`);
     return allCourses;
   }
 
