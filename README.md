@@ -286,7 +286,6 @@ src/
 ├── index.ts              # Entry point
 ├── server.ts             # MCP server implementation
 ├── api.ts                # N Lobby API integration
-├── auth-server.ts        # HTTP server for OAuth callbacks
 ├── browser-auth.ts       # Browser automation for login
 ├── credential-manager.ts # User credential validation and management
 ├── nextauth.ts           # NextAuth.js session handling
