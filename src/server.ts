@@ -185,6 +185,11 @@ export class NLobbyMCPServer {
                   type: "string",
                   description: "The ID of the news article to retrieve",
                 },
+                markAsRead: {
+                  type: "boolean",
+                  description: "Mark the news article as read (optional, default: false)",
+                  default: false,
+                },
               },
               required: ["newsId"],
             },
@@ -476,8 +481,21 @@ export class NLobbyMCPServer {
 
           case "get_news_detail":
             try {
-              const { newsId } = args as { newsId: string };
+              const { newsId, markAsRead = false } = args as { 
+                newsId: string; 
+                markAsRead?: boolean;
+              };
+              
               const newsDetail = await this.api.getNewsDetail(newsId);
+              
+              if (markAsRead) {
+                try {
+                  await this.api.markNewsAsRead(newsId);
+                } catch (markError) {
+                  logger.error(`Failed to mark news ${newsId} as read:`, markError);
+                }
+              }
+              
               return {
                 content: [
                   {
