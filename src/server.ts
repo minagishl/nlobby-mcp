@@ -162,8 +162,9 @@ export class NLobbyMCPServer {
                 },
                 limit: {
                   type: "number",
-                  description: "Maximum number of news items to retrieve (optional, default: all)",
+                  description: "Maximum number of news items to retrieve (optional, default: 10)",
                   minimum: 1,
+                  default: 10,
                 },
                 sort: {
                   type: "string",
@@ -423,7 +424,7 @@ export class NLobbyMCPServer {
         switch (name) {
           case "get_news":
             try {
-              const { category, limit, sort = "newest" } = args as { 
+              const { category, limit = 10, sort = "newest" } = args as { 
                 category?: string; 
                 limit?: number; 
                 sort?: "newest" | "oldest" | "title-asc" | "title-desc";
@@ -450,7 +451,7 @@ export class NLobbyMCPServer {
                   break;
               }
               
-              if (limit && limit > 0) {
+              if (limit > 0) {
                 filteredNews = filteredNews.slice(0, limit);
               }
               
