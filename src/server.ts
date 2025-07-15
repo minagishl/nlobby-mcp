@@ -398,6 +398,20 @@ export class NLobbyMCPServer {
               },
             },
           },
+          {
+            name: "mark_news_as_read",
+            description: "Mark a news article as read",
+            inputSchema: {
+              type: "object",
+              properties: {
+                id: {
+                  type: "string",
+                  description: "The ID of the news article to mark as read",
+                },
+              },
+              required: ["id"],
+            },
+          },
         ],
       };
     });
@@ -915,6 +929,29 @@ export class NLobbyMCPServer {
                 },
               ],
             };
+
+          case "mark_news_as_read":
+            try {
+              const { id } = args as { id: string };
+              await this.api.markNewsAsRead(id);
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Successfully marked news article ${id} as read`,
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error marking news as read: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
 
           default:
             throw new McpError(

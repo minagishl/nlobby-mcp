@@ -3065,6 +3065,25 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     }
   }
 
+  async markNewsAsRead(id: string): Promise<any> {
+    logger.info(`[INFO] Marking news article ${id} as read`);
+    try {
+      const result = await this.httpClient.post("/api/trpc/news.upsertBrowsingHistory", `"${id}"`, {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": this.nextAuth.getCookieHeader(),
+          "Referer": `https://nlobby.nnn.ed.jp/news/${id}`,
+        },
+      });
+      
+      logger.info(`[SUCCESS] News article ${id} marked as read`);
+      return result.data;
+    } catch (error) {
+      logger.error(`[ERROR] Failed to mark news ${id} as read:`, error);
+      throw error;
+    }
+  }
+
   async getRequiredCourses(): Promise<NLobbyRequiredCourse[]> {
     logger.info("[INFO] Starting getRequiredCourses...");
     logger.info(
