@@ -17,6 +17,14 @@ A Model Context Protocol (MCP) server for accessing N Lobby school portal data. 
 
 ## Installation
 
+### Option 1: Install from npm (Recommended)
+
+```bash
+npm install -g nlobby-mcp
+```
+
+### Option 2: Development Installation
+
 1. Clone the repository:
 
 ```bash
@@ -60,9 +68,68 @@ MCP_SERVER_VERSION=1.0.0
 
 ### Running the Server
 
+For npm installation:
+
+```bash
+nlobby-mcp
+```
+
+For development installation:
+
 ```bash
 pnpm run start
 ```
+
+<details>
+<summary>Setup with Cursor and Other MCP Clients</summary>
+
+### Cursor IDE Setup
+
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=nlobby&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIm5sb2JieS1tY3AiXSwiZW52Ijp7Ik5MT0JCWV9CQVNFX1VSTCI6Imh0dHBzOi8vbmxvYmJ5Lm5ubi5lZC5qcCJ9fQ%3D%3D)
+
+Add the following to your Cursor settings (`~/.cursor/config.json`):
+
+```json
+{
+  "mcpServers": {
+    "nlobby": {
+      "command": "npx",
+      "args": ["-y", "nlobby-mcp"],
+      "env": {
+        "NLOBBY_BASE_URL": "https://nlobby.nnn.ed.jp"
+      }
+    }
+  }
+}
+```
+
+### Claude Desktop Setup
+
+Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "nlobby": {
+      "command": "npx",
+      "args": ["-y", "nlobby-mcp"],
+      "env": {
+        "NLOBBY_BASE_URL": "https://nlobby.nnn.ed.jp"
+      }
+    }
+  }
+}
+```
+
+### Other MCP Clients
+
+For any MCP-compatible client, use:
+
+- **Command**: `nlobby-mcp` (if installed globally) or `node /path/to/nlobby-mcp/dist/index.js`
+- **Protocol**: stdio
+- **Environment**: Optional environment variables as listed in Configuration section
+
+</details>
 
 ### MCP Resources
 
