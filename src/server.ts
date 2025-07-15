@@ -159,6 +159,11 @@ export class NLobbyMCPServer {
                   type: "string",
                   description: "Filter by category (optional)",
                 },
+                limit: {
+                  type: "number",
+                  description: "Maximum number of news items to retrieve (optional, default: all)",
+                  minimum: 1,
+                },
               },
             },
           },
@@ -398,11 +403,16 @@ export class NLobbyMCPServer {
         switch (name) {
           case "get_news":
             try {
-              const { category } = args as { category?: string };
+              const { category, limit } = args as { category?: string; limit?: number };
               const news = await this.api.getNews();
-              const filteredNews = category
+              let filteredNews = category
                 ? news.filter((n) => n.category === category)
                 : news;
+              
+              if (limit && limit > 0) {
+                filteredNews = filteredNews.slice(0, limit);
+              }
+              
               return {
                 content: [
                   {
