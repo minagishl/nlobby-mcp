@@ -164,6 +164,11 @@ export class NLobbyMCPServer {
                   description: "Maximum number of news items to retrieve (optional, default: all)",
                   minimum: 1,
                 },
+                sort: {
+                  type: "string",
+                  description: "Sort order: 'newest' (default), 'oldest', 'title-asc', 'title-desc'",
+                  enum: ["newest", "oldest", "title-asc", "title-desc"],
+                },
               },
             },
           },
@@ -403,11 +408,32 @@ export class NLobbyMCPServer {
         switch (name) {
           case "get_news":
             try {
-              const { category, limit } = args as { category?: string; limit?: number };
+              const { category, limit, sort = "newest" } = args as { 
+                category?: string; 
+                limit?: number; 
+                sort?: "newest" | "oldest" | "title-asc" | "title-desc";
+              };
               const news = await this.api.getNews();
               let filteredNews = category
                 ? news.filter((n) => n.category === category)
                 : news;
+              
+              // Sort the news
+              switch (sort) {
+                case "oldest":
+                  filteredNews.sort((a, b) => new Date(a.publishedAt || 0).getTime() - new Date(b.publishedAt || 0).getTime());
+                  break;
+                case "title-asc":
+                  filteredNews.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+                  break;
+                case "title-desc":
+                  filteredNews.sort((a, b) => (b.title || "").localeCompare(a.title || ""));
+                  break;
+                case "newest":
+                default:
+                  filteredNews.sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
+                  break;
+              }
               
               if (limit && limit > 0) {
                 filteredNews = filteredNews.slice(0, limit);
