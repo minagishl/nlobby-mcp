@@ -42,7 +42,7 @@ export class NLobbyApi {
       timeout: 10000,
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": "NLobby-MCP-Server/1.0.0",
+        "User-Agent": CONFIG.userAgent,
       },
     });
 
@@ -806,10 +806,7 @@ Troubleshooting steps:
     } catch (error) {
       results.personal.error =
         error instanceof Error ? error.message : "Unknown error";
-      logger.error(
-        "[ERROR] Personal calendar failed:",
-        results.personal.error,
-      );
+      logger.error("[ERROR] Personal calendar failed:", results.personal.error);
     }
 
     // Test school calendar
@@ -1459,8 +1456,7 @@ Troubleshooting steps:
           "Sec-Fetch-Mode": "navigate",
           "Sec-Fetch-Site": "none",
           "Cache-Control": "max-age=0",
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "User-Agent": CONFIG.userAgent,
         },
         withCredentials: true,
       });
@@ -2759,8 +2755,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
         headers: {
           Accept:
             "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+          "User-Agent": CONFIG.userAgent,
         },
         withCredentials: true,
         timeout: 10000,
@@ -2927,8 +2922,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
           Accept:
             "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           "Accept-Language": "ja,en-US;q=0.7,en;q=0.3",
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+          "User-Agent": CONFIG.userAgent,
         },
         withCredentials: true,
         timeout: 10000,
@@ -3068,14 +3062,18 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
   async markNewsAsRead(id: string): Promise<any> {
     logger.info(`[INFO] Marking news article ${id} as read`);
     try {
-      const result = await this.httpClient.post("/api/trpc/news.upsertBrowsingHistory", `"${id}"`, {
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": this.nextAuth.getCookieHeader(),
-          "Referer": `https://nlobby.nnn.ed.jp/news/${id}`,
+      const result = await this.httpClient.post(
+        "/api/trpc/news.upsertBrowsingHistory",
+        `"${id}"`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: this.nextAuth.getCookieHeader(),
+            Referer: `https://nlobby.nnn.ed.jp/news/${id}`,
+          },
         },
-      });
-      
+      );
+
       logger.info(`[SUCCESS] News article ${id} marked as read`);
       return result.data;
     } catch (error) {

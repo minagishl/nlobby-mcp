@@ -35,7 +35,7 @@ export class TRPCClient {
       timeout: 15000,
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": "NLobby-MCP-Server/1.0.0",
+        "User-Agent": CONFIG.userAgent,
         Accept: "application/json",
         "Accept-Language": "ja,en-US;q=0.7,en;q=0.3",
         "Accept-Encoding": "gzip, deflate, br",
