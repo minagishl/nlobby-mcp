@@ -8,8 +8,15 @@ export enum LogLevel {
 export class Logger {
   private static instance: Logger;
   private logLevel: LogLevel = LogLevel.INFO;
+  private isProduction: boolean = false;
 
-  private constructor() {}
+  private constructor() {
+    // Check if running in production (when used as MCP server)
+    this.isProduction =
+      process.env.NODE_ENV === "production" ||
+      process.env.MCP_PRODUCTION === "true" ||
+      !process.stdout.isTTY;
+  }
 
   static getInstance(): Logger {
     if (!Logger.instance) {
@@ -24,6 +31,11 @@ export class Logger {
 
   private log(level: LogLevel, message: string, ...args: any[]): void {
     if (level < this.logLevel) {
+      return;
+    }
+
+    // In production, only log errors and warnings to avoid noise
+    if (this.isProduction && level < LogLevel.WARN) {
       return;
     }
 
