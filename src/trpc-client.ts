@@ -149,9 +149,7 @@ export class TRPCClient {
             "Authentication expired. Please re-authenticate with NextAuth cookies.",
           );
         } else if (error.response?.status === 403) {
-          logger.error(
-            "[BLOCKED] Access forbidden - insufficient permissions",
-          );
+          logger.error("[BLOCKED] Access forbidden - insufficient permissions");
           throw new Error(
             "Access forbidden. Check your permissions or re-authenticate.",
           );
@@ -279,9 +277,7 @@ export class TRPCClient {
             "[BLOCKED] tRPC 403 Forbidden - insufficient permissions",
           );
         } else if (axiosError.response?.status === 404) {
-          logger.error(
-            "[BLOCKED] tRPC 404 Not Found - endpoint may not exist",
-          );
+          logger.error("[BLOCKED] tRPC 404 Not Found - endpoint may not exist");
         } else if (axiosError.response?.status >= 500) {
           logger.error("[BLOCKED] tRPC Server Error - N Lobby backend issue");
         }
@@ -354,97 +350,6 @@ export class TRPCClient {
       from,
       to,
     });
-  }
-
-  // Additional methods for news and announcements
-  async getNews(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.find", params);
-  }
-
-  async getNewsList(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.findMany", params);
-  }
-
-  async getNewsDetail(id: string): Promise<any> {
-    return this.call<any>("news.findUnique", { where: { id } });
-  }
-
-  // New methods based on working endpoints
-  async getNewsAll(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.getAll", params);
-  }
-
-  async getNewsList2(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.list", params);
-  }
-
-  async queryNews(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.query", params);
-  }
-
-  async getRecentNews(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.getRecent", params);
-  }
-
-  async getPublishedNews(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.getPublished", params);
-  }
-
-  async getActiveNews(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.getActive", params);
-  }
-
-  async getNewsWithPagination(params?: any): Promise<any[]> {
-    return this.call<any[]>(
-      "news.findWithPagination",
-      params || { take: 20, skip: 0 },
-    );
-  }
-
-  // Additional endpoints based on working news.getUnreadNewsCount pattern
-  async getNewsListData(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.getListData", params);
-  }
-
-  async getNewsItems(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.getItems", params);
-  }
-
-  async getNewsContent(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.getContent", params);
-  }
-
-  async browseNews(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.browse", params);
-  }
-
-  async searchNews(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.search", params);
-  }
-
-  async getNewsFeed(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.getFeed", params);
-  }
-
-  async getNewsPage(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.getPage", params);
-  }
-
-  async getNewsData(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.getData", params);
-  }
-
-  // Try with common database-style methods
-  async findAllNews(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.findAll", params);
-  }
-
-  async selectNews(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.select", params);
-  }
-
-  async listNews(params?: any): Promise<any[]> {
-    return this.call<any[]>("news.list", params);
   }
 
   // Health check method
