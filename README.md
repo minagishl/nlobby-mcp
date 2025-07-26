@@ -4,6 +4,10 @@
 
 A Model Context Protocol (MCP) server for accessing N Lobby school portal data. This server provides secure access to school information including announcements, schedules, and learning resources through browser-based authentication.
 
+<a href="https://glama.ai/mcp/servers/@minagishl/nlobby-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@minagishl/nlobby-mcp/badge" alt="N Lobby Server MCP server" />
+</a>
+
 ## Features
 
 - **Browser-based Authentication**: Interactive login via automated browser window
