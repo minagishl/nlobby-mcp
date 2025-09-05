@@ -1662,16 +1662,6 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
         name: "news.findMany_empty",
         method: () => this.trpcClient.call("news.findMany", {}),
       },
-
-      // **Priority 4**: Database-style methods (existing implementation)
-      { name: "findAllNews", method: () => this.trpcClient.findAllNews() },
-      {
-        name: "findAllNews_limited",
-        method: () => this.trpcClient.findAllNews({ limit: 67 }),
-      },
-      { name: "listNews", method: () => this.trpcClient.listNews() },
-      { name: "selectNews", method: () => this.trpcClient.selectNews() },
-
       // **Priority 5**: More specific patterns
       {
         name: "news.getList",
@@ -1744,61 +1734,6 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       {
         name: "notifications.getAll",
         method: () => this.trpcClient.call("notifications.getAll"),
-      },
-
-      // **Priority 8**: Existing endpoints (keep for compatibility)
-      {
-        name: "getNewsListData",
-        method: () => this.trpcClient.getNewsListData(),
-      },
-      { name: "getNewsItems", method: () => this.trpcClient.getNewsItems() },
-      { name: "getNewsData", method: () => this.trpcClient.getNewsData() },
-      {
-        name: "getNewsContent",
-        method: () => this.trpcClient.getNewsContent(),
-      },
-      { name: "getNewsFeed", method: () => this.trpcClient.getNewsFeed() },
-      { name: "getNewsPage", method: () => this.trpcClient.getNewsPage() },
-      { name: "getNewsAll", method: () => this.trpcClient.getNewsAll() },
-      { name: "getNewsList2", method: () => this.trpcClient.getNewsList2() },
-      { name: "getRecentNews", method: () => this.trpcClient.getRecentNews() },
-      {
-        name: "getPublishedNews",
-        method: () => this.trpcClient.getPublishedNews(),
-      },
-      { name: "getActiveNews", method: () => this.trpcClient.getActiveNews() },
-      { name: "queryNews", method: () => this.trpcClient.queryNews() },
-      { name: "browseNews", method: () => this.trpcClient.browseNews() },
-      { name: "searchNews_all", method: () => this.trpcClient.searchNews({}) },
-
-      // **Priority 9**: Pagination-based endpoints (existing)
-      {
-        name: "getNewsWithPagination",
-        method: () =>
-          this.trpcClient.getNewsWithPagination({ take: 50, skip: 0 }),
-      },
-      {
-        name: "getNewsWithPagination_all",
-        method: () =>
-          this.trpcClient.getNewsWithPagination({ take: 100, skip: 0 }),
-      },
-      {
-        name: "getNewsWithPagination_small",
-        method: () =>
-          this.trpcClient.getNewsWithPagination({ take: 10, skip: 0 }),
-      },
-
-      // **Priority 10**: Original endpoints (keep for compatibility)
-      { name: "getNews", method: () => this.trpcClient.getNews() },
-      { name: "getNewsList", method: () => this.trpcClient.getNewsList() },
-      {
-        name: "getNotificationMessages",
-        method: () => this.trpcClient.getNotificationMessages(),
-      },
-      { name: "getNews_empty", method: () => this.trpcClient.getNews({}) },
-      {
-        name: "getNewsList_empty",
-        method: () => this.trpcClient.getNewsList({}),
       },
     ];
 
