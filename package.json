@@ -1,6 +1,6 @@
 {
   "name": "nlobby-mcp",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "MCP server for N Lobby school portal",
   "main": "dist/index.js",
   "type": "module",
