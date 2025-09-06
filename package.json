@@ -40,14 +40,18 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@eslint/js": "^9.35.0",
     "@types/node": "^20.10.0",
-    "@typescript-eslint/eslint-plugin": "^6.13.0",
-    "@typescript-eslint/parser": "^6.13.0",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@typescript-eslint/parser": "^8.42.0",
     "esbuild": "^0.25.6",
-    "eslint": "^8.54.0",
+    "eslint": "^9.35.0",
+    "globals": "^16.3.0",
     "jest": "^29.7.0",
+    "jiti": "^2.5.1",
     "prettier": "^3.6.2",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "typescript-eslint": "^8.42.0"
   },
   "bin": {
     "nlobby-mcp": "dist/index.js"
