@@ -173,14 +173,6 @@ export interface GoogleCalendarEvent {
   }>;
 }
 
-export interface GoogleCalendarResponse {
-  result: {
-    data: {
-      gcal: GoogleCalendarEvent[];
-    };
-  };
-}
-
 export interface CalendarDateRange {
   from: Date;
   to: Date;
@@ -311,35 +303,11 @@ export interface EducationApiResponse extends TRPCResponse {
   };
 }
 
-export interface NewsApiResponse extends TRPCResponse {
-  result?: {
-    data?: NLobbyNewsDetail[];
-  };
-}
-
-export interface UserApiResponse extends TRPCResponse {
-  result?: {
-    data?: {
-      id?: string;
-      email?: string;
-      name?: string;
-      role?: string;
-      [key: string]: unknown;
-    };
-  };
-}
-
 export interface StandardApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
   message?: string;
-}
-
-export interface AuthConfig {
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
 }
 
 // News data parsing types
@@ -423,11 +391,6 @@ export interface AxiosError {
   response?: AxiosErrorResponse;
   config?: AxiosErrorConfig;
   message?: string;
-  [key: string]: unknown;
-}
-
-// DOM parsing types
-export interface CheerioElement {
   [key: string]: unknown;
 }
 
