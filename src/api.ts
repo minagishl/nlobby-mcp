@@ -19,9 +19,19 @@ import {
   CourseReportDetail,
   CalendarType,
   GoogleCalendarEvent,
-  GoogleCalendarResponse,
   CalendarDateRange,
+  CalendarApiResponse,
+  StandardApiResponse,
+  NewsData,
+  CalendarEvent,
+  AxiosError,
+  ApiResponseData,
+  EducationApiResponseData,
+  NewsItem,
 } from "./types.js";
+
+// Type definitions for internal use
+type UnknownObject = Record<string, unknown>;
 
 export class NLobbyApi {
   private httpClient: AxiosInstance;
@@ -185,7 +195,7 @@ Troubleshooting steps:
         `[SUCCESS] Found ${nextFPushMatches.length} self.__next_f.push() calls`,
       );
 
-      let newsData: any = null;
+      let newsData: NewsData | null = null;
       let contentData: string = "";
       const contentReferences: Map<string, string> = new Map();
 
@@ -315,27 +325,32 @@ Troubleshooting steps:
     }
   }
 
-  private searchForNewsDataInObject(obj: any, path: string = ""): any | null {
+  private searchForNewsDataInObject(
+    obj: unknown,
+    path: string = "",
+  ): NewsData | null {
     if (!obj || typeof obj !== "object") return null;
+
+    const objRecord = obj as Record<string, unknown>;
 
     // Check if this object has news-like properties
     if (
-      obj.id &&
-      obj.title &&
-      (obj.publishedAt || obj.description || obj.menuName)
+      objRecord.id &&
+      objRecord.title &&
+      (objRecord.publishedAt || objRecord.description || objRecord.menuName)
     ) {
       logger.info(`[INFO] Found news object at path: ${path}`);
-      return obj;
+      return obj as NewsData;
     }
 
     // Check for "news" property
-    if (obj.news && typeof obj.news === "object") {
+    if (objRecord.news && typeof objRecord.news === "object") {
       logger.info(`[INFO] Found news property at path: ${path}.news`);
-      return obj.news;
+      return objRecord.news as NewsData;
     }
 
     // Recursively search through object properties
-    for (const [key, value] of Object.entries(obj)) {
+    for (const [key, value] of Object.entries(objRecord)) {
       if (value && typeof value === "object") {
         const searchPath = path ? `${path}.${key}` : key;
         const found = this.searchForNewsDataInObject(value, searchPath);
@@ -427,7 +442,7 @@ Troubleshooting steps:
       logger.debug(`[STATUS] Request input:`, input);
       logger.debug(`[COOKIE] Authentication status:`, this.getCookieStatus());
 
-      const response = await this.httpClient.get<GoogleCalendarResponse>(
+      const response = await this.httpClient.get<CalendarApiResponse>(
         endpoint,
         {
           params: { input: JSON.stringify(input) },
@@ -450,13 +465,13 @@ Troubleshooting steps:
         `  - Response keys: ${response.data ? Object.keys(response.data) : "none"}`,
       );
       logger.info(
-        `  - Has result: ${(response.data as any)?.result ? "yes" : "no"}`,
+        `  - Has result: ${(response.data as unknown as ApiResponseData)?.result ? "yes" : "no"}`,
       );
       logger.info(
-        `  - Has result.data: ${(response.data as any)?.result?.data ? "yes" : "no"}`,
+        `  - Has result.data: ${(response.data as ApiResponseData)?.result?.data ? "yes" : "no"}`,
       );
       logger.info(
-        `  - Has result.data.gcal: ${(response.data as any)?.result?.data?.gcal ? "yes" : "no"}`,
+        `  - Has result.data.gcal: ${(response.data as ApiResponseData)?.result?.data?.gcal ? "yes" : "no"}`,
       );
       logger.info(
         `  - Full response structure:`,
@@ -465,7 +480,7 @@ Troubleshooting steps:
 
       // Check for different possible response formats
       let calendarEvents: GoogleCalendarEvent[] = [];
-      const responseData = response.data as any;
+      const responseData = response.data as ApiResponseData;
 
       if (responseData?.result?.data?.gcal) {
         // Standard format (personal calendar)
@@ -484,7 +499,7 @@ Troubleshooting steps:
         Array.isArray(responseData.result.data)
       ) {
         // Alternative format where data is directly an array
-        calendarEvents = responseData.result.data;
+        calendarEvents = responseData.result.data as GoogleCalendarEvent[];
         logger.info(
           `[SUCCESS] Found events in alternative format (direct array): ${calendarEvents.length} events`,
         );
@@ -496,7 +511,7 @@ Troubleshooting steps:
         );
       } else if (responseData?.data && Array.isArray(responseData.data)) {
         // Direct data array format
-        calendarEvents = responseData.data;
+        calendarEvents = responseData.data as GoogleCalendarEvent[];
         logger.info(
           `[SUCCESS] Found events in direct data array format: ${calendarEvents.length} events`,
         );
@@ -508,7 +523,7 @@ Troubleshooting steps:
         );
       } else if (Array.isArray(responseData)) {
         // Response is directly an array
-        calendarEvents = responseData;
+        calendarEvents = responseData as GoogleCalendarEvent[];
         logger.info(
           `[SUCCESS] Found events in direct array format: ${calendarEvents.length} events`,
         );
@@ -561,7 +576,7 @@ Troubleshooting steps:
       logger.error(`[ERROR] Error fetching Google Calendar events:`, error);
 
       if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as any;
+        const axiosError = error as AxiosError;
         logger.debug("[DEBUG] Calendar API error details:", {
           status: axiosError.response?.status,
           statusText: axiosError.response?.statusText,
@@ -592,35 +607,37 @@ Troubleshooting steps:
   }
 
   private convertGoogleCalendarEventsToScheduleItems(
-    events: any[],
+    events: unknown[],
   ): NLobbyScheduleItem[] {
     return events.map((event) => {
+      const calendarEvent = event as CalendarEvent;
+
       // Parse start and end times - handle both Google Calendar and School Calendar formats
       let startTime: Date;
       let endTime: Date;
 
       // Check for school calendar format first (startDateTime/endDateTime)
-      if (event.startDateTime) {
-        startTime = new Date(event.startDateTime);
-        endTime = event.endDateTime
-          ? new Date(event.endDateTime)
+      if (calendarEvent.startDateTime) {
+        startTime = new Date(calendarEvent.startDateTime);
+        endTime = calendarEvent.endDateTime
+          ? new Date(calendarEvent.endDateTime)
           : new Date(startTime.getTime() + 60 * 60 * 1000);
       }
       // Google Calendar format (start/end objects)
-      else if (event.start) {
-        if (event.start.dateTime) {
-          startTime = new Date(event.start.dateTime);
-        } else if (event.start.date) {
-          startTime = new Date(event.start.date + "T00:00:00");
+      else if (calendarEvent.start) {
+        if (calendarEvent.start.dateTime) {
+          startTime = new Date(calendarEvent.start.dateTime);
+        } else if (calendarEvent.start.date) {
+          startTime = new Date(calendarEvent.start.date + "T00:00:00");
         } else {
           startTime = new Date();
         }
 
-        if (event.end && event.end.dateTime) {
-          endTime = new Date(event.end.dateTime);
-        } else if (event.end && event.end.date) {
+        if (calendarEvent.end && calendarEvent.end.dateTime) {
+          endTime = new Date(calendarEvent.end.dateTime);
+        } else if (calendarEvent.end && calendarEvent.end.date) {
           // For all-day events, end date is exclusive, so we subtract 1 day and set to end of day
-          endTime = new Date(event.end.date + "T23:59:59");
+          endTime = new Date(calendarEvent.end.date + "T23:59:59");
           endTime.setDate(endTime.getDate() - 1);
         } else {
           endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Default 1 hour duration
@@ -634,7 +651,7 @@ Troubleshooting steps:
 
       // Determine event type based on content
       let type: "class" | "event" | "meeting" | "exam" = "event";
-      const summary = event.summary?.toLowerCase() || "";
+      const summary = (calendarEvent.summary || "").toLowerCase();
 
       if (summary.includes("授業") || summary.includes("class")) {
         type = "class";
@@ -655,19 +672,22 @@ Troubleshooting steps:
 
       // Extract participants from attendees (handle both formats)
       let participants: string[] = [];
-      if (event.attendees && Array.isArray(event.attendees)) {
-        participants = event.attendees
-          .map((attendee: any) => attendee.email)
+      if (calendarEvent.attendees && Array.isArray(calendarEvent.attendees)) {
+        participants = calendarEvent.attendees
+          .map((attendee) => attendee.email)
           .filter(Boolean);
       }
 
       const scheduleItem: NLobbyScheduleItem = {
-        id: event.id || event.microCmsId || Math.random().toString(),
-        title: event.summary || event.title || "No Title",
-        description: event.description || "",
+        id:
+          calendarEvent.id ||
+          calendarEvent.microCmsId ||
+          Math.random().toString(),
+        title: calendarEvent.summary || calendarEvent.title || "No Title",
+        description: calendarEvent.description || "",
         startTime,
         endTime,
-        location: event.location || "",
+        location: calendarEvent.location || "",
         type,
         participants,
       };
@@ -852,10 +872,10 @@ Troubleshooting steps:
     }
   }
 
-  async getUserInfo(): Promise<any> {
+  async getUserInfo(): Promise<unknown> {
     try {
       const response =
-        await this.httpClient.get<NLobbyApiResponse>("/api/user");
+        await this.httpClient.get<StandardApiResponse>("/api/user");
 
       if (!response.data.success) {
         throw new Error(response.data.error || "Failed to fetch user info");
@@ -870,7 +890,7 @@ Troubleshooting steps:
     }
   }
 
-  private searchForNewsInData(obj: any, path: string = ""): any[] {
+  private searchForNewsInData(obj: unknown, path: string = ""): unknown[] {
     if (!obj || typeof obj !== "object") return [];
 
     // If it's an array, check if it looks like a news array
@@ -965,9 +985,10 @@ Troubleshooting steps:
 
       const announcements: NLobbyAnnouncement[] = [];
 
-      rows.each((index: number, rowElement: any) => {
+      rows.each((index: number, rowElement: unknown) => {
         try {
-          const $row = $(rowElement);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const $row = $(rowElement as any);
           const rowId = $row.attr("data-id");
 
           if (!rowId) {
@@ -990,12 +1011,13 @@ Troubleshooting steps:
           let isUnread = false;
           let url = "";
 
-          cells.each((_cellIndex: number, cellElement: any) => {
-            const $cell = $(cellElement);
+          cells.each((_cellIndex: number, cellElement: unknown) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const $cell = $(cellElement as any);
             const field = $cell.attr("data-field");
 
             switch (field) {
-              case "title":
+              case "title": {
                 // Extract title and URL from the link
                 const link = $cell.find("a");
                 if (link.length > 0) {
@@ -1016,24 +1038,27 @@ Troubleshooting steps:
                   url = `${CONFIG.nlobby.baseUrl}/news/${rowId}`;
                 }
                 break;
+              }
 
               case "menuName":
                 category = $cell.text().trim();
                 break;
 
-              case "isImportant":
+              case "isImportant": {
                 // Check if there's any content indicating importance
                 isImportant =
                   $cell.text().trim().length > 0 || $cell.find("*").length > 0;
                 break;
+              }
 
-              case "isUnread":
+              case "isUnread": {
                 // Check for "未読" text or any indicator
                 const unreadText = $cell.text().trim();
                 isUnread = unreadText.includes("未読") || unreadText.length > 0;
                 break;
+              }
 
-              case "publishedAt":
+              case "publishedAt": {
                 const dateText = $cell.text().trim();
                 if (dateText) {
                   // Parse Japanese date format: 2025/07/13 09:00
@@ -1043,6 +1068,7 @@ Troubleshooting steps:
                   }
                 }
                 break;
+              }
             }
           });
 
@@ -1122,7 +1148,7 @@ Troubleshooting steps:
 
             const pushData = JSON.parse(jsonMatch[1]);
             logger.info(
-              `[INFO] Push call ${i + 1}: Array length ${pushData.length}, types: [${pushData.map((item: any) => typeof item).join(", ")}]`,
+              `[INFO] Push call ${i + 1}: Array length ${pushData.length}, types: [${pushData.map((item: unknown) => typeof item).join(", ")}]`,
             );
 
             // Check if this looks like the news data format: [1, "5:[[...]]]"]
@@ -1513,7 +1539,7 @@ Troubleshooting steps:
       );
 
       if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as any;
+        const axiosError = error as AxiosError;
         logger.debug("[DEBUG] HTTP Error Details:", {
           status: axiosError.response?.status,
           statusText: axiosError.response?.statusText,
@@ -1550,7 +1576,8 @@ Troubleshooting steps:
     // Verify all cookies are set correctly
     const httpCookies = this.httpClient.defaults.headers.Cookie;
     const nextAuthAuthenticated = this.nextAuth.isAuthenticated();
-    const trpcCookies = (this.trpcClient as any).allCookies;
+    const trpcCookies = (this.trpcClient as unknown as { allCookies?: string })
+      .allCookies;
 
     logger.info("[INFO] Cookie verification:");
     logger.info(
@@ -1576,13 +1603,17 @@ Troubleshooting steps:
     const hasHttpCookies = !!this.httpClient.defaults.headers.Cookie;
     const hasNextAuthCookies = this.nextAuth.isAuthenticated();
     const nextAuthCookies = this.nextAuth.getCookies();
-    const hasTrpcCookies = !!(this.trpcClient as any).allCookies;
+    const hasTrpcCookies = !!(
+      this.trpcClient as unknown as { allCookies?: string }
+    ).allCookies;
 
     // Get cookie lengths for detailed analysis
     const httpCookieString = this.httpClient.defaults.headers.Cookie;
     const httpCookieLength =
       typeof httpCookieString === "string" ? httpCookieString.length : 0;
-    const trpcCookieLength = (this.trpcClient as any).allCookies?.length || 0;
+    const trpcCookieLength =
+      (this.trpcClient as unknown as { allCookies?: string }).allCookies
+        ?.length || 0;
     const nextAuthCookieHeaderLength =
       this.nextAuth.getCookieHeader()?.length || 0;
 
@@ -1602,7 +1633,7 @@ Cookie Synchronization: ${cookiesSynced ? "[SUCCESS] synchronized" : "[ERROR] no
 ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected - may cause authentication issues" : ""}`;
   }
 
-  private async tryMultipleNewsEndpoints(): Promise<any[] | null> {
+  private async tryMultipleNewsEndpoints(): Promise<unknown[] | null> {
     const endpoints = [
       // **Priority 1**: Direct simple patterns based on working getUnreadNewsCount
       { name: "news.find", method: () => this.trpcClient.call("news.find") },
@@ -1743,7 +1774,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       `[STATUS] Testing ${endpoints.length} different endpoint configurations`,
     );
 
-    let lastValidResponse: any = null;
+    let lastValidResponse: unknown = null;
     const triedEndpoints: Array<{
       name: string;
       success: boolean;
@@ -1809,11 +1840,12 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
           // Check if object contains array properties
           for (const key of Object.keys(data)) {
-            if (Array.isArray(data[key]) && data[key].length > 0) {
+            const value = (data as Record<string, unknown>)[key];
+            if (Array.isArray(value) && value.length > 0) {
               logger.info(
-                `[SUCCESS] Found array in object property '${key}' with ${data[key].length} items`,
+                `[SUCCESS] Found array in object property '${key}' with ${value.length} items`,
               );
-              return data[key];
+              return value;
             }
           }
         } else {
@@ -1842,7 +1874,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
         // Enhanced error logging
         if (error && typeof error === "object" && "response" in error) {
-          const axiosError = error as any;
+          const axiosError = error as AxiosError;
           const status = axiosError.response?.status;
           const statusText = axiosError.response?.statusText;
 
@@ -1869,7 +1901,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
             logger.info(
               `[LOG] ${endpoint.name}: Access forbidden (permissions issue)`,
             );
-          } else if (status >= 500) {
+          } else if (status && status >= 500) {
             logger.info(
               `[LOG] ${endpoint.name}: Server error (try again later)`,
             );
@@ -2038,10 +2070,11 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
             },
             withCredentials: true,
           });
-        } catch (preflightError: any) {
+        } catch (preflightError: unknown) {
           // Check if error response contains action in headers
-          if (preflightError.response?.headers?.["next-action"]) {
-            action = preflightError.response.headers["next-action"];
+          const axiosError = preflightError as AxiosError;
+          if (axiosError.response?.headers?.["next-action"]) {
+            action = axiosError.response.headers["next-action"];
             logger.info("[SUCCESS] Found action in preflight response headers");
           } else {
             logger.info(
@@ -2070,7 +2103,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       });
 
       if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as any;
+        const axiosError = error as AxiosError;
         logger.debug("[DEBUG] Metadata extraction Axios error:", {
           status: axiosError.response?.status,
           statusText: axiosError.response?.statusText,
@@ -2086,7 +2119,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     }
   }
 
-  private async fetchNewsViaRSC(): Promise<any[] | null> {
+  private async fetchNewsViaRSC(): Promise<unknown[] | null> {
     try {
       logger.info("[INFO] Starting RSC approach...");
 
@@ -2148,7 +2181,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       });
 
       if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as any;
+        const axiosError = error as AxiosError;
         logger.debug("[DEBUG] RSC Axios error details:", {
           status: axiosError.response?.status,
           statusText: axiosError.response?.statusText,
@@ -2267,7 +2300,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       });
 
       if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as any;
+        const axiosError = error as AxiosError;
         logger.debug("[DEBUG] HTML Axios error details:", {
           status: axiosError.response?.status,
           statusText: axiosError.response?.statusText,
@@ -2289,83 +2322,91 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     }
   }
 
-  private transformNewsToAnnouncements(newsData: any[]): NLobbyAnnouncement[] {
+  private transformNewsToAnnouncements(
+    newsData: unknown[],
+  ): NLobbyAnnouncement[] {
     logger.info(
       `Transforming ${newsData.length} news items to announcements...`,
     );
 
     return newsData.map((item, index) => {
+      const newsItem = item as NewsItem;
+
       // Handle various date formats that might exist in the data
       let publishedDate = new Date();
-      if (item.publishedAt) {
-        publishedDate = new Date(item.publishedAt);
-      } else if (item.createdAt) {
-        publishedDate = new Date(item.createdAt);
-      } else if (item.updatedAt) {
-        publishedDate = new Date(item.updatedAt);
-      } else if (item.date) {
-        publishedDate = new Date(item.date);
+      if (newsItem.publishedAt) {
+        publishedDate = new Date(newsItem.publishedAt);
+      } else if (newsItem.createdAt) {
+        publishedDate = new Date(newsItem.createdAt);
+      } else if (newsItem.updatedAt) {
+        publishedDate = new Date(newsItem.updatedAt);
+      } else if (newsItem.date) {
+        publishedDate = new Date(newsItem.date);
       }
 
       // Handle various title formats
       const title =
-        item.title ||
-        item.name ||
-        item.subject ||
-        item.heading ||
+        newsItem.title ||
+        newsItem.name ||
+        newsItem.subject ||
+        newsItem.heading ||
         `News Item ${index + 1}`;
 
       // Handle various content formats
       const content =
-        item.content ||
-        item.description ||
-        item.body ||
-        item.text ||
-        item.summary ||
+        newsItem.content ||
+        newsItem.description ||
+        newsItem.body ||
+        newsItem.text ||
+        newsItem.summary ||
         "";
 
       // Handle various category formats
       const category =
-        item.category ||
-        item.menuName ||
-        item.type ||
-        item.classification ||
+        newsItem.category ||
+        newsItem.menuName ||
+        newsItem.type ||
+        newsItem.classification ||
         "General";
 
       // Determine priority based on various indicators
       let priority: "high" | "medium" | "low" = "medium";
       if (
-        item.isImportant === true ||
-        item.important === true ||
-        item.priority === "high" ||
-        item.urgent === true
+        newsItem.isImportant === true ||
+        newsItem.important === true ||
+        newsItem.priority === "high" ||
+        newsItem.urgent === true
       ) {
         priority = "high";
-      } else if (item.priority === "low" || item.minor === true) {
+      } else if (newsItem.priority === "low" || newsItem.minor === true) {
         priority = "low";
       }
 
       // Generate proper URL in format: baseUrl + /news/ + id
-      const newsId = item.id || index;
+      const newsId = newsItem.id || index;
       const fullUrl = `${CONFIG.nlobby.baseUrl}/news/${newsId}`;
 
       // Build the announcement object, preserving original properties
       const announcement: NLobbyAnnouncement = {
-        id: item.id?.toString() || index.toString(),
+        id: newsItem.id?.toString() || index.toString(),
         title,
         content,
         publishedAt: publishedDate,
         category,
         priority,
-        targetAudience: item.targetAudience || ["student"],
+        targetAudience: (newsItem.targetAudience as (
+          | "student"
+          | "parent"
+          | "staff"
+        )[]) || ["student"],
         url: fullUrl,
         // Preserve original properties for debugging and future use
-        menuName: item.menuName,
-        isImportant: item.isImportant,
-        isUnread: item.isUnread,
+        menuName: newsItem.menuName,
+        isImportant: Boolean(newsItem.isImportant),
+        isUnread: Boolean(newsItem.isUnread),
         // Add any additional properties from the original item
         ...Object.fromEntries(
-          Object.entries(item).filter(
+          Object.entries(newsItem).filter(
             ([key]) =>
               ![
                 "id",
@@ -2384,7 +2425,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     });
   }
 
-  private parseRSCResponse(rscData: string): any[] | null {
+  private parseRSCResponse(rscData: string): unknown[] | null {
     try {
       logger.info("[INFO] Parsing RSC response...");
       logger.debug(`[SIZE] RSC data length: ${rscData.length}`);
@@ -2650,7 +2691,9 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     logger.info("[INFO] Final diagnostic:");
     const hasHttpCookies = !!this.httpClient.defaults.headers.Cookie;
     const hasNextAuthCookies = this.nextAuth.isAuthenticated();
-    const hasTrpcCookies = !!(this.trpcClient as any).allCookies;
+    const hasTrpcCookies = !!(
+      this.trpcClient as unknown as { allCookies?: string }
+    ).allCookies;
 
     if (!hasHttpCookies && !hasNextAuthCookies && !hasTrpcCookies) {
       logger.info(
@@ -2766,7 +2809,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     } catch (error) {
       debugReport.push("[ERROR] Basic connectivity failed");
       if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as any;
+        const axiosError = error as AxiosError;
         debugReport.push(
           `[STATUS] Error Status: ${axiosError.response?.status || "unknown"}`,
         );
@@ -2804,7 +2847,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
         typeof trpcError === "object" &&
         "response" in trpcError
       ) {
-        const axiosError = trpcError as any;
+        const axiosError = trpcError as AxiosError;
         debugReport.push(
           `[STATUS] Error Status: ${axiosError.response?.status || "unknown"}`,
         );
@@ -2944,7 +2987,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
       );
 
       if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as any;
+        const axiosError = error as AxiosError;
         return `Error ${axiosError.response?.status || "unknown"}: ${axiosError.message || "Unknown error"}\n\nResponse data: ${JSON.stringify(axiosError.response?.data || {}, null, 2)}`;
       }
 
@@ -2952,7 +2995,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     }
   }
 
-  async testTrpcEndpoint(method: string, params?: any): Promise<any> {
+  async testTrpcEndpoint(method: string, params?: unknown): Promise<unknown> {
     try {
       logger.info(`[INFO] Testing tRPC endpoint: ${method}`);
       logger.debug(`[STATUS] Params:`, params);
@@ -2973,7 +3016,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     } catch (error) {
       logger.error(`[ERROR] tRPC endpoint ${method} failed:`, error);
 
-      const errorInfo: any = {
+      const errorInfo: UnknownObject = {
         success: false,
         method,
         params,
@@ -2983,7 +3026,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
       // Add detailed error information if available
       if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as any;
+        const axiosError = error as AxiosError;
         errorInfo.status = axiosError.response?.status;
         errorInfo.statusText = axiosError.response?.statusText;
         errorInfo.responseData = axiosError.response?.data;
@@ -2994,7 +3037,7 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
     }
   }
 
-  async markNewsAsRead(id: string): Promise<any> {
+  async markNewsAsRead(id: string): Promise<unknown> {
     logger.info(`[INFO] Marking news article ${id} as read`);
     try {
       const result = await this.httpClient.post(
@@ -3044,45 +3087,48 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
       // Check for different possible response formats
       let educationData: EducationData | null = null;
+      const responseData = response as EducationApiResponseData;
 
       // Format 1: Expected format { result: { data: EducationData } }
-      if (response && response.result && response.result.data) {
+      if (responseData && responseData.result && responseData.result.data) {
         logger.info(
           "[SUCCESS] Found data in expected format: response.result.data",
         );
-        educationData = response.result.data;
+        educationData = responseData.result.data;
       }
       // Format 2: Direct data format { data: EducationData }
-      else if (response && response.data) {
+      else if (responseData && responseData.data) {
         logger.info(
           "[SUCCESS] Found data in alternative format: response.data",
         );
-        educationData = response.data;
+        educationData = responseData.data;
       }
       // Format 3: Direct EducationData format
       else if (
-        response &&
-        response.educationProcessName &&
-        response.termYears
+        responseData &&
+        responseData.educationProcessName &&
+        responseData.termYears
       ) {
         logger.info(
           "[SUCCESS] Found data in direct format: response as EducationData",
         );
-        educationData = response as EducationData;
+        educationData = responseData as unknown as EducationData;
       }
       // Format 4: Check if response is directly an array of courses
-      else if (response && Array.isArray(response)) {
+      else if (responseData && Array.isArray(responseData)) {
         logger.info("[SUCCESS] Found data as direct array of courses");
-        return response;
+        return responseData;
       }
       // Format 5: Check for other possible nested structures
-      else if (response) {
+      else if (responseData) {
         logger.info(
           "[INFO] Searching for education data in nested structures...",
         );
 
         // Search for educationProcessName in nested objects
-        const searchResult = this.findEducationDataInObject(response);
+        const searchResult = this.findEducationDataInObject(
+          responseData as UnknownObject,
+        );
         if (searchResult) {
           logger.info("[SUCCESS] Found education data in nested structure");
           educationData = searchResult;
@@ -3134,7 +3180,7 @@ Please check the API documentation or contact support.`);
   }
 
   private findEducationDataInObject(
-    obj: any,
+    obj: UnknownObject,
     path: string = "",
   ): EducationData | null {
     if (!obj || typeof obj !== "object") return null;
@@ -3146,14 +3192,17 @@ Please check the API documentation or contact support.`);
       Array.isArray(obj.termYears)
     ) {
       logger.info(`[INFO] Found education data at path: ${path}`);
-      return obj as EducationData;
+      return obj as unknown as EducationData;
     }
 
     // Recursively search through object properties
     for (const [key, value] of Object.entries(obj)) {
       if (value && typeof value === "object") {
         const searchPath = path ? `${path}.${key}` : key;
-        const found = this.findEducationDataInObject(value, searchPath);
+        const found = this.findEducationDataInObject(
+          value as UnknownObject,
+          searchPath,
+        );
         if (found) return found;
       }
     }

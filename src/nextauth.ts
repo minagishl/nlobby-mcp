@@ -78,7 +78,7 @@ export class NextAuthHandler {
   }
 
   // Decode NextAuth.js session token (if needed)
-  async decodeSessionToken(): Promise<any> {
+  async decodeSessionToken(): Promise<{ token: string } | null> {
     if (!this.cookies.sessionToken) {
       return null;
     }

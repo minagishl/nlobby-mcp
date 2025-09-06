@@ -2,25 +2,26 @@ import axios, { AxiosInstance } from "axios";
 import { CONFIG } from "./config.js";
 import { NextAuthHandler } from "./nextauth.js";
 import { logger } from "./logger.js";
+import { AxiosError, NetworkError } from "./types.js";
 
 export interface TRPCRequest {
   id: number;
   method: string;
-  params?: any;
+  params?: unknown;
 }
 
-export interface TRPCResponse<T = any> {
+export interface TRPCResponse<T = unknown> {
   id: number;
   result?: T;
   error?: {
     code: number;
     message: string;
-    data?: any;
+    data?: unknown;
   };
 }
 
-export interface TRPCBatchRequest extends Array<TRPCRequest> {}
-export interface TRPCBatchResponse extends Array<TRPCResponse> {}
+export type TRPCBatchRequest = Array<TRPCRequest>;
+export type TRPCBatchResponse = Array<TRPCResponse>;
 
 export class TRPCClient {
   private httpClient: AxiosInstance;
@@ -167,7 +168,7 @@ export class TRPCClient {
     return this.requestId++;
   }
 
-  async call<T = any>(method: string, params?: any): Promise<T> {
+  async call<T = unknown>(method: string, params?: unknown): Promise<T> {
     const request: TRPCRequest = {
       id: this.getNextRequestId(),
       method,
@@ -255,7 +256,7 @@ export class TRPCClient {
 
       // Enhanced axios error logging
       if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as any;
+        const axiosError = error as AxiosError;
         logger.error(`[DEBUG] tRPC ${method} Axios error details:`, {
           status: axiosError.response?.status,
           statusText: axiosError.response?.statusText,
@@ -278,11 +279,14 @@ export class TRPCClient {
           );
         } else if (axiosError.response?.status === 404) {
           logger.error("[BLOCKED] tRPC 404 Not Found - endpoint may not exist");
-        } else if (axiosError.response?.status >= 500) {
+        } else if (
+          axiosError.response?.status &&
+          axiosError.response.status >= 500
+        ) {
           logger.error("[BLOCKED] tRPC Server Error - N Lobby backend issue");
         }
       } else if (error && typeof error === "object" && "code" in error) {
-        const networkError = error as any;
+        const networkError = error as NetworkError;
         if (networkError.code === "ECONNREFUSED") {
           logger.error(
             "[NETWORK] Network Error: Connection refused - N Lobby may be down",
@@ -302,7 +306,7 @@ export class TRPCClient {
     }
   }
 
-  private buildTRPCUrl(method: string, params?: any): string {
+  private buildTRPCUrl(method: string, params?: unknown): string {
     // tRPC URL format: /api/trpc/method.name?input={"param":"value"}
     // The baseURL already includes /api/trpc, so we just need the method name
     const methodUrl = method;
@@ -321,32 +325,32 @@ export class TRPCClient {
     return this.call<number>("news.getUnreadNewsCount");
   }
 
-  async getNotificationMessages(): Promise<any[]> {
-    return this.call<any[]>("notification.getMessages");
+  async getNotificationMessages(): Promise<unknown[]> {
+    return this.call<unknown[]>("notification.getMessages");
   }
 
   async updateLastAccess(): Promise<void> {
     return this.call<void>("user.updateLastAccess");
   }
 
-  async findMainNavigations(): Promise<any[]> {
-    return this.call<any[]>("menu.findMainNavigations", {});
+  async findMainNavigations(): Promise<unknown[]> {
+    return this.call<unknown[]>("menu.findMainNavigations", {});
   }
 
-  async readInterestsWithIcon(): Promise<any[]> {
-    return this.call<any[]>("interest.readInterestsWithIcon");
+  async readInterestsWithIcon(): Promise<unknown[]> {
+    return this.call<unknown[]>("interest.readInterestsWithIcon");
   }
 
-  async readInterests(): Promise<any[]> {
-    return this.call<any[]>("interest.readInterests");
+  async readInterests(): Promise<unknown[]> {
+    return this.call<unknown[]>("interest.readInterests");
   }
 
-  async readWeights(): Promise<any[]> {
-    return this.call<any[]>("interest.readWeights");
+  async readWeights(): Promise<unknown[]> {
+    return this.call<unknown[]>("interest.readWeights");
   }
 
-  async getLobbyCalendarEvents(from: string, to: string): Promise<any[]> {
-    return this.call<any[]>("calendar.getLobbyCalendarEvents", {
+  async getLobbyCalendarEvents(from: string, to: string): Promise<unknown[]> {
+    return this.call<unknown[]>("calendar.getLobbyCalendarEvents", {
       from,
       to,
     });

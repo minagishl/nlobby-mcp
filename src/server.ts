@@ -14,7 +14,7 @@ import { NLobbyApi } from "./api.js";
 import { CONFIG } from "./config.js";
 import { BrowserAuth } from "./browser-auth.js";
 import { CredentialManager } from "./credential-manager.js";
-import { CalendarType } from "./types.js";
+import { CalendarType, Course } from "./types.js";
 import { logger } from "./logger.js";
 
 export class NLobbyMCPServer {
@@ -84,7 +84,7 @@ export class NLobbyMCPServer {
 
         try {
           switch (uri) {
-            case "nlobby://news":
+            case "nlobby://news": {
               const news = await this.api.getNews();
               return {
                 contents: [
@@ -95,8 +95,9 @@ export class NLobbyMCPServer {
                   },
                 ],
               };
+            }
 
-            case "nlobby://schedule":
+            case "nlobby://schedule": {
               const schedule = await this.api.getSchedule();
               return {
                 contents: [
@@ -107,8 +108,9 @@ export class NLobbyMCPServer {
                   },
                 ],
               };
+            }
 
-            case "nlobby://user-profile":
+            case "nlobby://user-profile": {
               const userInfo = await this.api.getUserInfo();
               return {
                 contents: [
@@ -119,8 +121,9 @@ export class NLobbyMCPServer {
                   },
                 ],
               };
+            }
 
-            case "nlobby://required-courses":
+            case "nlobby://required-courses": {
               const courses = await this.api.getRequiredCourses();
               return {
                 contents: [
@@ -131,6 +134,7 @@ export class NLobbyMCPServer {
                   },
                 ],
               };
+            }
 
             default:
               throw new McpError(
@@ -162,13 +166,15 @@ export class NLobbyMCPServer {
                 },
                 limit: {
                   type: "number",
-                  description: "Maximum number of news items to retrieve (optional, default: 10)",
+                  description:
+                    "Maximum number of news items to retrieve (optional, default: 10)",
                   minimum: 1,
                   default: 10,
                 },
                 sort: {
                   type: "string",
-                  description: "Sort order: 'newest' (default), 'oldest', 'title-asc', 'title-desc'",
+                  description:
+                    "Sort order: 'newest' (default), 'oldest', 'title-asc', 'title-desc'",
                   enum: ["newest", "oldest", "title-asc", "title-desc"],
                 },
               },
@@ -187,7 +193,8 @@ export class NLobbyMCPServer {
                 },
                 markAsRead: {
                   type: "boolean",
-                  description: "Mark the news article as read (optional, default: false)",
+                  description:
+                    "Mark the news article as read (optional, default: false)",
                   default: false,
                 },
               },
@@ -429,37 +436,53 @@ export class NLobbyMCPServer {
         switch (name) {
           case "get_news":
             try {
-              const { category, limit = 10, sort = "newest" } = args as { 
-                category?: string; 
-                limit?: number; 
+              const {
+                category,
+                limit = 10,
+                sort = "newest",
+              } = args as {
+                category?: string;
+                limit?: number;
                 sort?: "newest" | "oldest" | "title-asc" | "title-desc";
               };
               const news = await this.api.getNews();
               let filteredNews = category
                 ? news.filter((n) => n.category === category)
                 : news;
-              
+
               // Sort the news
               switch (sort) {
                 case "oldest":
-                  filteredNews.sort((a, b) => new Date(a.publishedAt || 0).getTime() - new Date(b.publishedAt || 0).getTime());
+                  filteredNews.sort(
+                    (a, b) =>
+                      new Date(a.publishedAt || 0).getTime() -
+                      new Date(b.publishedAt || 0).getTime(),
+                  );
                   break;
                 case "title-asc":
-                  filteredNews.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+                  filteredNews.sort((a, b) =>
+                    (a.title || "").localeCompare(b.title || ""),
+                  );
                   break;
                 case "title-desc":
-                  filteredNews.sort((a, b) => (b.title || "").localeCompare(a.title || ""));
+                  filteredNews.sort((a, b) =>
+                    (b.title || "").localeCompare(a.title || ""),
+                  );
                   break;
                 case "newest":
                 default:
-                  filteredNews.sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
+                  filteredNews.sort(
+                    (a, b) =>
+                      new Date(b.publishedAt || 0).getTime() -
+                      new Date(a.publishedAt || 0).getTime(),
+                  );
                   break;
               }
-              
+
               if (limit > 0) {
                 filteredNews = filteredNews.slice(0, limit);
               }
-              
+
               return {
                 content: [
                   {
@@ -481,21 +504,24 @@ export class NLobbyMCPServer {
 
           case "get_news_detail":
             try {
-              const { newsId, markAsRead = false } = args as { 
-                newsId: string; 
+              const { newsId, markAsRead = false } = args as {
+                newsId: string;
                 markAsRead?: boolean;
               };
-              
+
               const newsDetail = await this.api.getNewsDetail(newsId);
-              
+
               if (markAsRead) {
                 try {
                   await this.api.markNewsAsRead(newsId);
                 } catch (markError) {
-                  logger.error(`Failed to mark news ${newsId} as read:`, markError);
+                  logger.error(
+                    `Failed to mark news ${newsId} as read:`,
+                    markError,
+                  );
                 }
               }
-              
+
               return {
                 content: [
                   {
@@ -641,10 +667,11 @@ export class NLobbyMCPServer {
               let dateRange;
               if (period) {
                 switch (period) {
-                  case "today":
+                  case "today": {
                     const today = new Date();
                     dateRange = this.api.createSingleDayRange(today);
                     break;
+                  }
                   case "week":
                     dateRange = this.api.createWeekDateRange();
                     break;
@@ -767,7 +794,7 @@ export class NLobbyMCPServer {
               };
             }
 
-          case "set_cookies":
+          case "set_cookies": {
             const { cookies } = args as { cookies: string };
             this.api.setCookies(cookies);
             return {
@@ -778,8 +805,9 @@ export class NLobbyMCPServer {
                 },
               ],
             };
+          }
 
-          case "check_cookies":
+          case "check_cookies": {
             const cookieStatus = this.api.getCookieStatus();
             return {
               content: [
@@ -789,8 +817,9 @@ export class NLobbyMCPServer {
                 },
               ],
             };
+          }
 
-          case "health_check":
+          case "health_check": {
             const isHealthy = await this.api.healthCheck();
             return {
               content: [
@@ -800,8 +829,9 @@ export class NLobbyMCPServer {
                 },
               ],
             };
+          }
 
-          case "debug_connection":
+          case "debug_connection": {
             const { endpoint } = args as { endpoint?: string };
             const debugResult = await this.api.debugConnection(
               endpoint || "/news",
@@ -814,8 +844,9 @@ export class NLobbyMCPServer {
                 },
               ],
             };
+          }
 
-          case "test_page_content":
+          case "test_page_content": {
             const { endpoint: testEndpoint, length } = args as {
               endpoint?: string;
               length?: number;
@@ -832,8 +863,9 @@ export class NLobbyMCPServer {
                 },
               ],
             };
+          }
 
-          case "test_trpc_endpoint":
+          case "test_trpc_endpoint": {
             const { method, params } = args as {
               method: string;
               params?: string;
@@ -862,8 +894,9 @@ export class NLobbyMCPServer {
                 ],
               };
             }
+          }
 
-          case "verify_authentication":
+          case "verify_authentication": {
             const authStatus = this.api.getCookieStatus();
             return {
               content: [
@@ -873,6 +906,7 @@ export class NLobbyMCPServer {
                 },
               ],
             };
+          }
 
           case "interactive_login":
             try {
@@ -911,7 +945,7 @@ export class NLobbyMCPServer {
               };
             }
 
-          case "login_help":
+          case "login_help": {
             const { email } = args as { email?: string };
 
             let helpMessage = `[LOGIN] N Lobby Login Help\n\n`;
@@ -948,6 +982,7 @@ export class NLobbyMCPServer {
                 },
               ],
             };
+          }
 
           case "mark_news_as_read":
             try {
@@ -1069,7 +1104,7 @@ export class NLobbyMCPServer {
     return recommendations.join("\n");
   }
 
-  private groupCoursesByGrade(courses: any[]): Record<string, number> {
+  private groupCoursesByGrade(courses: Course[]): Record<string, number> {
     const groups: Record<string, number> = {};
 
     for (const course of courses) {
@@ -1080,7 +1115,7 @@ export class NLobbyMCPServer {
     return groups;
   }
 
-  private groupCoursesByCurriculum(courses: any[]): Record<string, number> {
+  private groupCoursesByCurriculum(courses: Course[]): Record<string, number> {
     const groups: Record<string, number> = {};
 
     for (const course of courses) {

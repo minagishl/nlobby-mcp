@@ -130,7 +130,7 @@ export interface GoogleCalendarConferenceData {
   };
   conferenceId?: string;
   notes?: string;
-  parameters?: any;
+  parameters?: Record<string, unknown>;
 }
 
 export interface GoogleCalendarEvent {
@@ -249,6 +249,7 @@ export interface NLobbyRequiredCourse {
   averageScore?: number | null;
   isCompleted?: boolean;
   isInProgress?: boolean;
+  [key: string]: unknown;
 }
 
 export interface TermYear {
@@ -273,7 +274,62 @@ export interface EducationData {
   termYears: TermYear[];
 }
 
-export interface NLobbyApiResponse<T = any> {
+export interface NLobbyApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+// Specific API response types based on actual usage patterns
+export interface TRPCResponse<T = unknown> {
+  result?: {
+    data?: T;
+    [key: string]: unknown;
+  };
+  data?: T;
+  [key: string]: unknown;
+}
+
+export interface CalendarApiResponse extends TRPCResponse {
+  result?: {
+    data?: {
+      gcal?: GoogleCalendarEvent[];
+      lcal?: GoogleCalendarEvent[];
+      [key: string]: unknown;
+    };
+  };
+  data?: {
+    gcal?: GoogleCalendarEvent[];
+    [key: string]: unknown;
+  };
+}
+
+export interface EducationApiResponse extends TRPCResponse {
+  result?: {
+    data?: EducationData;
+  };
+}
+
+export interface NewsApiResponse extends TRPCResponse {
+  result?: {
+    data?: NLobbyNewsDetail[];
+  };
+}
+
+export interface UserApiResponse extends TRPCResponse {
+  result?: {
+    data?: {
+      id?: string;
+      email?: string;
+      name?: string;
+      role?: string;
+      [key: string]: unknown;
+    };
+  };
+}
+
+export interface StandardApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -284,4 +340,183 @@ export interface AuthConfig {
   clientId: string;
   clientSecret: string;
   redirectUri: string;
+}
+
+// News data parsing types
+export interface NewsData {
+  id?: string;
+  microCmsId?: string;
+  title?: string;
+  description?: string;
+  publishedAt?: string;
+  menuName?: string[];
+  isImportant?: boolean;
+  isByMentor?: boolean;
+  attachments?: Array<{
+    href: string;
+    fileName: string;
+    downloadFileName: string;
+  }>;
+  relatedEvents?: Array<{
+    microCmsId: string;
+    dateTimes: string[];
+    deadlineDate?: string;
+    cardMake: {
+      href: string;
+      category: string;
+      title: string;
+    };
+    chips: Array<{
+      label: string;
+      color: string;
+    }>;
+    imgObject?: {
+      url: string;
+      alt: string;
+    };
+  }>;
+  targetUserQueryId?: string;
+  [key: string]: unknown;
+}
+
+// Calendar event types for conversion
+export interface CalendarEvent {
+  id?: string;
+  microCmsId?: string;
+  summary?: string;
+  title?: string;
+  description?: string;
+  location?: string;
+  start?: {
+    dateTime?: string;
+    date?: string;
+  };
+  end?: {
+    dateTime?: string;
+    date?: string;
+  };
+  startDateTime?: string;
+  endDateTime?: string;
+  attendees?: Array<{
+    email: string;
+    [key: string]: unknown;
+  }>;
+  [key: string]: unknown;
+}
+
+// Axios error types
+export interface AxiosErrorResponse {
+  status?: number;
+  statusText?: string;
+  data?: unknown;
+  headers?: Record<string, string>;
+}
+
+export interface AxiosErrorConfig {
+  url?: string;
+  method?: string;
+  headers?: Record<string, string>;
+  timeout?: number;
+}
+
+export interface AxiosError {
+  response?: AxiosErrorResponse;
+  config?: AxiosErrorConfig;
+  message?: string;
+  [key: string]: unknown;
+}
+
+// DOM parsing types
+export interface CheerioElement {
+  [key: string]: unknown;
+}
+
+// API response data types
+export interface ApiResponseData {
+  result?: {
+    data?: {
+      gcal?: GoogleCalendarEvent[];
+      lcal?: GoogleCalendarEvent[];
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  };
+  data?: {
+    gcal?: GoogleCalendarEvent[];
+    lcal?: GoogleCalendarEvent[];
+    [key: string]: unknown;
+  };
+  gcal?: GoogleCalendarEvent[];
+  [key: string]: unknown;
+}
+
+// Education API response types
+export interface EducationApiResponseData {
+  result?: {
+    data?: EducationData;
+    [key: string]: unknown;
+  };
+  data?: EducationData;
+  educationProcessName?: string;
+  termYears?: TermYear[];
+  [key: string]: unknown;
+}
+
+// News item transformation types
+export interface NewsItem {
+  id?: string | number;
+  title?: string;
+  name?: string;
+  subject?: string;
+  heading?: string;
+  content?: string;
+  description?: string;
+  body?: string;
+  text?: string;
+  summary?: string;
+  publishedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  date?: string;
+  category?: string;
+  menuName?: string;
+  type?: string;
+  classification?: string;
+  isImportant?: boolean;
+  important?: boolean;
+  priority?: string;
+  urgent?: boolean;
+  minor?: boolean;
+  targetAudience?: string[];
+  [key: string]: unknown;
+}
+
+// Course types for server.ts
+export interface Course {
+  id?: string;
+  grade?: string;
+  curriculumName?: string;
+  termYear?: number | string;
+  isCompleted?: boolean;
+  isInProgress?: boolean;
+  curriculumCode?: string;
+  subjectCode?: string;
+  subjectName?: string;
+  subjectStatus?: number;
+  previousRegistration?: boolean;
+  report?: CourseReport;
+  reportDetails?: CourseReportDetail[];
+  schooling?: CourseSchooling;
+  test?: CourseTest;
+  acquired?: CourseAcquired;
+  progressPercentage?: number;
+  averageScore?: number | null;
+  [key: string]: unknown;
+}
+
+// Network error types for trpc-client.ts
+export interface NetworkError {
+  code?: string;
+  message?: string;
+  [key: string]: unknown;
 }
