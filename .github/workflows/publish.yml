@@ -3,7 +3,7 @@ name: Publish to npm
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
 jobs:
   publish:
@@ -25,7 +25,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 10
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfil
@@ -39,7 +39,7 @@ jobs:
           npm config set provenance true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          
+
       - name: Publish to npm with signing
         run: pnpm publish --no-git-checks --provenance --access public
         env:
