@@ -413,16 +413,19 @@ export class NLobbyMCPServer {
           },
           {
             name: "mark_news_as_read",
-            description: "Mark a news article as read",
+            description: "Mark news articles as read",
             inputSchema: {
               type: "object",
               properties: {
-                id: {
-                  type: "string",
-                  description: "The ID of the news article to mark as read",
+                ids: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                  },
+                  description: "Array of news article IDs to mark as read",
                 },
               },
-              required: ["id"],
+              required: ["ids"],
             },
           },
         ],
@@ -986,13 +989,55 @@ export class NLobbyMCPServer {
 
           case "mark_news_as_read":
             try {
-              const { id } = args as { id: string };
-              await this.api.markNewsAsRead(id);
+              const { ids } = args as { ids: string[] };
+
+              if (!ids || ids.length === 0) {
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: "Error: No news article IDs provided. Please specify 'ids' parameter with at least one ID.",
+                    },
+                  ],
+                };
+              }
+
+              // Process each ID sequentially
+              const results = [];
+              const errors = [];
+
+              for (const newsId of ids) {
+                try {
+                  await this.api.markNewsAsRead(newsId);
+                  results.push(newsId);
+                } catch (error) {
+                  errors.push({
+                    id: newsId,
+                    error:
+                      error instanceof Error ? error.message : "Unknown error",
+                  });
+                }
+              }
+
+              // Prepare response message
+              let responseText = "";
+
+              if (results.length > 0) {
+                responseText += `Successfully marked ${results.length} news article(s) as read: ${results.join(", ")}\n`;
+              }
+
+              if (errors.length > 0) {
+                responseText += `\nFailed to mark ${errors.length} news article(s) as read:\n`;
+                errors.forEach(({ id, error }) => {
+                  responseText += `- ${id}: ${error}\n`;
+                });
+              }
+
               return {
                 content: [
                   {
                     type: "text",
-                    text: `Successfully marked news article ${id} as read`,
+                    text: responseText.trim(),
                   },
                 ],
               };

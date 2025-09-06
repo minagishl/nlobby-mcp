@@ -160,7 +160,7 @@ Available tools:
 - `get_schedule` - Get schedule for a specific date (backward compatibility)
 - `get_calendar_events` - Get calendar events with advanced options (personal/school)
 - `test_calendar_endpoints` - Test both personal and school calendar endpoints
-- `mark_news_as_read` - Mark a news article as read
+- `mark_news_as_read` - Mark news articles as read (supports multiple IDs)
 
 #### Debugging Tools
 
@@ -226,8 +226,8 @@ get_required_courses
 # Get required courses for a specific grade
 get_required_courses grade=2
 
-# Mark a news article as read
-mark_news_as_read id="980"
+# Mark a news article as read (single ID)
+mark_news_as_read ids=["980"]
 ```
 
 ### For Staff
