@@ -211,6 +211,15 @@ export class NLobbyMCPServer {
             },
           },
           {
+            name: "get_student_card_screenshot",
+            description:
+              "Capture a screenshot of the student ID card by following the secure portal redirect flow",
+            inputSchema: {
+              type: "object",
+              properties: {},
+            },
+          },
+          {
             name: "get_required_courses",
             description:
               "Retrieve required courses information with detailed progress tracking",
@@ -571,6 +580,47 @@ export class NLobbyMCPServer {
                   {
                     type: "text",
                     text: `Error: ${error instanceof Error ? error.message : "Unknown error"}\n\nEnsure valid authentication cookies are set with the set_cookies tool.`,
+                  },
+                ],
+              };
+            }
+
+          case "get_student_card_screenshot":
+            try {
+              const result = await this.api.getStudentCardScreenshot();
+
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(
+                      {
+                        message:
+                          "Student card screenshot captured successfully. Image data attached as base64.",
+                        filePath: result.path,
+                        studentNo: result.studentNo,
+                        secureHost: result.secureHost,
+                        callbackUrl: result.callbackUrl,
+                        finalUrl: result.finalUrl,
+                        elementSize: result.elementSize,
+                      },
+                      null,
+                      2,
+                    ),
+                  },
+                  {
+                    type: "image",
+                    mimeType: "image/png",
+                    data: result.base64,
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error capturing student card screenshot: ${error instanceof Error ? error.message : "Unknown error"}\n\nPlease verify authentication (set_cookies or interactive_login) and ensure the student portal is accessible.`,
                   },
                 ],
               };

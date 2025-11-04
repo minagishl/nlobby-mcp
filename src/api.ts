@@ -1,5 +1,9 @@
 import axios, { AxiosInstance } from "axios";
 import * as cheerio from "cheerio";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import puppeteer, { type Browser, type CookieParam } from "puppeteer";
 import { BrowserAuth } from "./browser-auth.js";
 import { CONFIG } from "./config.js";
 import { logger } from "./logger.js";
@@ -920,6 +924,291 @@ Troubleshooting steps:
         }\n\nTroubleshooting steps:\n1. Ensure you are authenticated (use set_cookies)\n2. Verify session with health_check`,
       );
     }
+  }
+
+  async getStudentCardScreenshot(): Promise<{
+    base64: string;
+    path: string;
+    studentNo: string;
+    secureHost: string;
+    callbackUrl: string;
+    finalUrl: string;
+    elementSize?: { width: number; height: number };
+  }> {
+    const accountInfo = await this.getAccountInfoFromScript("/");
+    const studentNo = accountInfo.studentNo;
+
+    if (!studentNo || studentNo.length < 3) {
+      throw new Error(
+        "Student number is missing from account information. Ensure you are authenticated and try again.",
+      );
+    }
+
+    const secureHost = this.resolveSecureHostFromStudentNo(studentNo);
+    const targetUrl = `https://${secureHost}/mypage/student_card/index`;
+    const callbackUrl = `https://nlobby.nnn.ed.jp/mypage/v1/callback?redirect_uri=${encodeURIComponent(targetUrl)}`;
+
+    const rawCookieHeader = this.httpClient.defaults.headers.Cookie;
+    const cookieHeader =
+      typeof rawCookieHeader === "string"
+        ? rawCookieHeader
+        : rawCookieHeader === undefined || rawCookieHeader === null
+          ? undefined
+          : String(rawCookieHeader);
+
+    if (!cookieHeader) {
+      throw new Error(
+        "Authentication cookies are not set. Use the set_cookies tool or interactive_login first.",
+      );
+    }
+
+    const cookieParams = this.buildPuppeteerCookies(
+      cookieHeader,
+      "nlobby.nnn.ed.jp",
+    );
+    if (cookieParams.length === 0) {
+      throw new Error(
+        "Failed to parse authentication cookies for browser session. Please refresh your session and try again.",
+      );
+    }
+
+    const screenshotResult = await this.captureElementScreenshot({
+      startUrl: callbackUrl,
+      waitForSelector: "#main",
+      screenshotName: `student-card-${Date.now()}.png`,
+      cookies: cookieParams,
+    });
+
+    return {
+      base64: screenshotResult.base64,
+      path: screenshotResult.path,
+      studentNo,
+      secureHost,
+      callbackUrl,
+      finalUrl: screenshotResult.finalUrl,
+      elementSize: screenshotResult.elementSize,
+    };
+  }
+
+  private resolveSecureHostFromStudentNo(studentNo: string): string {
+    const identifier = studentNo.charAt(2)?.toUpperCase();
+    if (!identifier) {
+      logger.warn(
+        `[STUDENT_CARD] Student number ${studentNo} does not contain a third character; defaulting to s-secure.`,
+      );
+      return "secure.nnn.ed.jp";
+    }
+
+    if (identifier === "N") {
+      return "secure.nnn.ed.jp";
+    }
+
+    if (!/[A-Z]/.test(identifier)) {
+      logger.warn(
+        `[STUDENT_CARD] Student number ${studentNo} third character "${identifier}" is not a letter; defaulting to s-secure.`,
+      );
+      return "secure.nnn.ed.jp";
+    }
+
+    return `${identifier.toLowerCase()}-secure.nnn.ed.jp`;
+  }
+
+  private buildPuppeteerCookies(
+    cookieHeader: string,
+    domain: string,
+  ): CookieParam[] {
+    const cookies: CookieParam[] = [];
+
+    for (const rawPart of cookieHeader.split(";")) {
+      const part = rawPart.trim();
+      if (!part) continue;
+
+      const separatorIndex = part.indexOf("=");
+      if (separatorIndex <= 0) continue;
+
+      const name = part.slice(0, separatorIndex);
+      const value = part.slice(separatorIndex + 1);
+
+      cookies.push({
+        name,
+        value,
+        domain,
+        path: "/",
+        secure: true,
+        httpOnly:
+          name.startsWith("__Secure-") ||
+          name.startsWith("__Host-") ||
+          name.toLowerCase().includes("session"),
+        sameSite: "Lax",
+      });
+    }
+
+    return cookies;
+  }
+
+  private async captureElementScreenshot(options: {
+    startUrl: string;
+    waitForSelector: string;
+    screenshotName: string;
+    cookies: CookieParam[];
+  }): Promise<{
+    base64: string;
+    path: string;
+    finalUrl: string;
+    elementSize?: { width: number; height: number };
+  }> {
+    logger.info(
+      `[STUDENT_CARD] Launching headless browser for student card capture (${options.startUrl})`,
+    );
+
+    const browser = await this.launchBrowser();
+
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1280, height: 720 });
+      await page.setUserAgent(CONFIG.userAgent);
+
+      if (options.cookies.length > 0) {
+        logger.info(
+          `[STUDENT_CARD] Setting ${options.cookies.length} authentication cookies`,
+        );
+        await page.setCookie(...options.cookies);
+      } else {
+        logger.warn("[STUDENT_CARD] No cookies provided to browser session");
+      }
+
+      const response = await page.goto(options.startUrl, {
+        waitUntil: "networkidle2",
+        timeout: 60000,
+      });
+
+      if (!response) {
+        logger.warn(
+          "[STUDENT_CARD] Navigation returned no response object; continuing",
+        );
+      } else {
+        logger.info(
+          `[STUDENT_CARD] Initial navigation status: ${response.status()} ${response.statusText()}`,
+        );
+      }
+
+      await page.waitForSelector(options.waitForSelector, { timeout: 60000 });
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const elementHandle = await page.$(options.waitForSelector);
+      if (!elementHandle) {
+        throw new Error(
+          `Failed to locate element ${options.waitForSelector} for screenshot`,
+        );
+      }
+
+      const buffer = (await elementHandle.screenshot({
+        type: "png",
+      })) as Buffer;
+
+      const tmpDir = path.join(os.tmpdir(), "nlobby-student-card");
+      await fs.mkdir(tmpDir, { recursive: true });
+      const screenshotPath = path.join(tmpDir, options.screenshotName);
+      await fs.writeFile(screenshotPath, buffer);
+
+      const boundingBox = await elementHandle.boundingBox();
+      const elementSize = boundingBox
+        ? {
+            width: Math.round(boundingBox.width),
+            height: Math.round(boundingBox.height),
+          }
+        : undefined;
+
+      logger.info(
+        `[STUDENT_CARD] Screenshot captured at ${screenshotPath} (final URL: ${page.url()})`,
+      );
+
+      return {
+        base64: buffer.toString("base64"),
+        path: screenshotPath,
+        finalUrl: page.url(),
+        elementSize,
+      };
+    } finally {
+      await browser.close();
+    }
+  }
+
+  private async launchBrowser(): Promise<Browser> {
+    const launchArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
+    const executableCandidates = [
+      process.env.PUPPETEER_EXECUTABLE_PATH,
+      process.env.CHROME_PATH,
+    ].filter((value): value is string => !!value && value.trim().length > 0);
+
+    for (const candidate of executableCandidates) {
+      try {
+        logger.info(
+          `[STUDENT_CARD] Attempting to launch browser with executablePath=${candidate}`,
+        );
+        return await puppeteer.launch({
+          headless: true,
+          executablePath: candidate,
+          args: launchArgs,
+        });
+      } catch (error) {
+        logger.warn(
+          `[STUDENT_CARD] Failed to launch browser with executablePath=${candidate}:`,
+          error,
+        );
+      }
+    }
+
+    const launchErrors: Error[] = [];
+
+    const tryLaunch = async (
+      options: Parameters<typeof puppeteer.launch>[0],
+      description: string,
+    ): Promise<Browser | null> => {
+      try {
+        logger.info(`[STUDENT_CARD] Trying browser launch via ${description}`);
+        return await puppeteer.launch(options);
+      } catch (error) {
+        if (error instanceof Error) {
+          launchErrors.push(error);
+          logger.warn(
+            `[STUDENT_CARD] Browser launch failed via ${description}: ${error.message}`,
+          );
+        } else {
+          logger.warn(
+            `[STUDENT_CARD] Browser launch failed via ${description}:`,
+            error,
+          );
+        }
+        return null;
+      }
+    };
+
+    const defaultBrowser = await tryLaunch(
+      { headless: true, args: launchArgs },
+      "default Puppeteer bundle",
+    );
+    if (defaultBrowser) {
+      return defaultBrowser;
+    }
+
+    const channelBrowser = await tryLaunch(
+      { headless: true, channel: "chrome", args: launchArgs },
+      "system Chrome channel",
+    );
+    if (channelBrowser) {
+      return channelBrowser;
+    }
+
+    const combinedMessage = launchErrors
+      .map((error) => error.message)
+      .join("\n");
+    throw new Error(
+      `Failed to launch a browser instance for screenshot capture. ` +
+        `Tried Puppeteer's managed Chrome and the system Chrome channel. ` +
+        `Please install a compatible Chrome build via "npx puppeteer browsers install chrome" or set CHROME_PATH / PUPPETEER_EXECUTABLE_PATH. ` +
+        `Original errors:\n${combinedMessage}`,
+    );
   }
 
   private extractSessionFromNextJs(html: string): UnknownObject | null {
