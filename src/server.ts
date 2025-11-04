@@ -202,6 +202,15 @@ export class NLobbyMCPServer {
             },
           },
           {
+            name: "get_account_info",
+            description:
+              "Extract account information by parsing Next.js flight data from a rendered page",
+            inputSchema: {
+              type: "object",
+              properties: {},
+            },
+          },
+          {
             name: "get_required_courses",
             description:
               "Retrieve required courses information with detailed progress tracking",
@@ -539,6 +548,29 @@ export class NLobbyMCPServer {
                   {
                     type: "text",
                     text: `Error: ${error instanceof Error ? error.message : "Unknown error"}\n\nTo authenticate:\n1. Login to N Lobby in your browser\n2. Open Developer Tools (F12)\n3. Go to Application/Storage tab\n4. Copy cookies and use the set_cookies tool\n5. Use health_check to verify connection`,
+                  },
+                ],
+              };
+            }
+
+          case "get_account_info":
+            try {
+              const accountInfo = await this.api.getAccountInfoFromScript();
+
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(accountInfo, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}\n\nEnsure valid authentication cookies are set with the set_cookies tool.`,
                   },
                 ],
               };

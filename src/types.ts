@@ -16,6 +16,24 @@ export interface NLobbySession {
   callbackUrl?: string;
 }
 
+export interface NLobbyAccountInfo {
+  name: string | null;
+  email: string | null;
+  role: string | null;
+  image?: string | null;
+  userId?: string;
+  studentNo?: string;
+  schoolCorporationType?: number;
+  grade?: number;
+  term?: number;
+  isLobbyAdmin?: boolean;
+  firstLoginFlg?: number;
+  kmsLoginSuccess?: boolean;
+  staffDepartments?: unknown[];
+  studentOrganizations?: unknown[];
+  rawSession?: unknown;
+}
+
 export interface NLobbyAnnouncement {
   id: string;
   title: string;

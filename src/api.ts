@@ -8,6 +8,7 @@ import { TRPCClient } from "./trpc-client.js";
 import { CredentialManager } from "./credential-manager.js";
 import {
   NLobbySession,
+  NLobbyAccountInfo,
   NLobbyApiResponse,
   NLobbyAnnouncement,
   NLobbyNewsDetail,
@@ -888,6 +889,237 @@ Troubleshooting steps:
         "Authentication required. Please use the set_cookies tool to provide valid NextAuth.js session cookies from N Lobby.",
       );
     }
+  }
+
+  async getAccountInfoFromScript(
+    endpoint: string = "/",
+  ): Promise<NLobbyAccountInfo> {
+    logger.info(
+      `[INFO] Extracting account information from Next.js script at ${endpoint}`,
+    );
+
+    try {
+      const html = await this.fetchRenderedHtml(endpoint);
+      const sessionData = this.extractSessionFromNextJs(html);
+
+      if (!sessionData) {
+        throw new Error(
+          "Could not locate session data in Next.js flight scripts. Authentication might be required or the page structure may have changed.",
+        );
+      }
+
+      const accountInfo = this.buildAccountInfoFromSession(sessionData);
+
+      logger.info("[SUCCESS] Account information extracted successfully");
+      return accountInfo;
+    } catch (error) {
+      logger.error("Error extracting account info from script:", error);
+      throw new Error(
+        `Failed to extract account information: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }\n\nTroubleshooting steps:\n1. Ensure you are authenticated (use set_cookies)\n2. Verify session with health_check`,
+      );
+    }
+  }
+
+  private extractSessionFromNextJs(html: string): UnknownObject | null {
+    const pushRegex = /self\.__next_f\.push\((\[[\s\S]*?\])\)/g;
+    let match: RegExpExecArray | null;
+
+    while ((match = pushRegex.exec(html)) !== null) {
+      const rawJson = match[1];
+      if (!rawJson) {
+        continue;
+      }
+
+      try {
+        const pushData = JSON.parse(rawJson);
+        const session = this.findSessionInData(pushData, new WeakSet<object>());
+
+        if (session) {
+          logger.info("[SUCCESS] Found session data in Next.js flight payload");
+          return session;
+        }
+      } catch (error) {
+        logger.debug(
+          "[DEBUG] Failed to parse self.__next_f.push payload:",
+          error instanceof Error ? error.message : "Unknown error",
+        );
+      }
+    }
+
+    const nextDataRegexes = [
+      /<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/,
+      /window\.__NEXT_DATA__\s*=\s*({[\s\S]*?})(?:;|\s*<\/script>)/,
+    ];
+
+    for (const regex of nextDataRegexes) {
+      const nextDataMatch = html.match(regex);
+      if (!nextDataMatch || !nextDataMatch[1]) {
+        continue;
+      }
+
+      try {
+        const nextData = JSON.parse(nextDataMatch[1]);
+        const session = this.findSessionInData(nextData, new WeakSet<object>());
+        if (session) {
+          logger.info("[SUCCESS] Found session data in __NEXT_DATA__ payload");
+          return session;
+        }
+      } catch (error) {
+        logger.debug(
+          "[DEBUG] Failed to parse __NEXT_DATA__ payload:",
+          error instanceof Error ? error.message : "Unknown error",
+        );
+      }
+    }
+
+    logger.info("[WARNING] Session data not found in Next.js scripts");
+    return null;
+  }
+
+  private parseNextJsFlightPayload(payload: string): unknown | null {
+    if (typeof payload !== "string" || payload.length === 0) {
+      return null;
+    }
+
+    let candidate = payload.trim();
+    const colonIndex = candidate.indexOf(":");
+
+    if (colonIndex > 0 && colonIndex < 20) {
+      const prefix = candidate.slice(0, colonIndex);
+      if (/^[a-z0-9]+$/i.test(prefix)) {
+        candidate = candidate.slice(colonIndex + 1);
+      }
+    }
+
+    candidate = candidate.trim();
+
+    const htmlDecoded = candidate
+      .replace(/&quot;/g, '"')
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&amp;/g, "&");
+
+    try {
+      return JSON.parse(htmlDecoded);
+    } catch (error) {
+      logger.debug(
+        "[DEBUG] Failed to parse Next.js flight string:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
+      return null;
+    }
+  }
+
+  private findSessionInData(
+    data: unknown,
+    visited: WeakSet<object>,
+  ): UnknownObject | null {
+    if (data === null || data === undefined) {
+      return null;
+    }
+
+    if (typeof data === "string") {
+      const parsed = this.parseNextJsFlightPayload(data);
+      if (parsed) {
+        return this.findSessionInData(parsed, visited);
+      }
+      return null;
+    }
+
+    if (Array.isArray(data)) {
+      const arrayObject = data as unknown as object;
+      if (visited.has(arrayObject)) {
+        return null;
+      }
+      visited.add(arrayObject);
+
+      for (const item of data) {
+        const found = this.findSessionInData(item, visited);
+        if (found) {
+          return found;
+        }
+      }
+      return null;
+    }
+
+    if (typeof data === "object") {
+      const objectData = data as UnknownObject;
+      if (visited.has(objectData)) {
+        return null;
+      }
+      visited.add(objectData);
+
+      if (
+        Object.prototype.hasOwnProperty.call(objectData, "session") &&
+        objectData.session &&
+        typeof objectData.session === "object"
+      ) {
+        return objectData.session as UnknownObject;
+      }
+
+      for (const value of Object.values(objectData)) {
+        const found = this.findSessionInData(value, visited);
+        if (found) {
+          return found;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private buildAccountInfoFromSession(
+    sessionData: UnknownObject,
+  ): NLobbyAccountInfo {
+    const user = (sessionData.user ?? {}) as UnknownObject;
+    const kmsLogin = (user.kmsLogin ?? {}) as UnknownObject;
+    const kmsContent = (kmsLogin.content ?? {}) as UnknownObject;
+
+    let image: string | null | undefined;
+    if (typeof user.image === "string") {
+      image = user.image !== "$undefined" ? user.image : null;
+    } else if (user.image === null) {
+      image = null;
+    }
+
+    return {
+      name: typeof user.name === "string" ? user.name : null,
+      email: typeof user.email === "string" ? user.email : null,
+      role: typeof user.role === "string" ? user.role : null,
+      image,
+      userId:
+        typeof kmsContent.userId === "string" ? kmsContent.userId : undefined,
+      studentNo:
+        typeof kmsContent.studentNo === "string"
+          ? kmsContent.studentNo
+          : undefined,
+      schoolCorporationType:
+        typeof kmsContent.schoolCorporationType === "number"
+          ? kmsContent.schoolCorporationType
+          : undefined,
+      grade:
+        typeof kmsContent.grade === "number" ? kmsContent.grade : undefined,
+      term: typeof kmsContent.term === "number" ? kmsContent.term : undefined,
+      isLobbyAdmin:
+        typeof kmsContent.isLobbyAdmin === "boolean"
+          ? kmsContent.isLobbyAdmin
+          : undefined,
+      firstLoginFlg:
+        typeof kmsContent.firstLoginFlg === "number"
+          ? kmsContent.firstLoginFlg
+          : undefined,
+      kmsLoginSuccess:
+        typeof kmsLogin.success === "boolean" ? kmsLogin.success : undefined,
+      staffDepartments: Array.isArray(kmsContent.staffDepartments)
+        ? (kmsContent.staffDepartments as unknown[])
+        : undefined,
+      studentOrganizations: Array.isArray(kmsContent.studentOrganizations)
+        ? (kmsContent.studentOrganizations as unknown[])
+        : undefined,
+      rawSession: sessionData,
+    };
   }
 
   private searchForNewsInData(obj: unknown, path: string = ""): unknown[] {
