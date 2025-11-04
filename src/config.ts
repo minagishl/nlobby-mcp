@@ -22,7 +22,7 @@ export const CONFIG = {
   },
   mcp: {
     serverName: process.env.MCP_SERVER_NAME || "nlobby-mcp",
-    serverVersion: process.env.MCP_SERVER_VERSION || "1.0.0",
+    serverVersion: process.env.MCP_SERVER_VERSION || "1.3.0",
   },
   userAgent: process.env.USER_AGENT || getPlatformUserAgent(),
 } as const;

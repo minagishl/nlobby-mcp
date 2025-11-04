@@ -1,41 +1,86 @@
 # Changelog
 
-All notable changes to this project are documented here. Release notes are sourced from the repository's GitHub releases.
+> This document follows a Keep a Changelog–inspired format. Each release groups notable additions, changes, and fixes, with helpful comparison links for digging deeper.
 
-## v1.2.3 - 2025-09-06
+---
 
-- Mark all as read feature
+## 1.3.0 · 2025-11-04
 
-[Full Changelog](https://github.com/minagishl/nlobby-mcp/compare/v1.2.2...v1.2.3)
+### Added
 
-## v1.2.2 - 2025-09-06
+- Next.js flight-data parser surfaces account details via the `get_account_info` tool.
+- `get_student_card_screenshot` tool navigates the secure portal and returns a PNG (plus metadata) of the student ID.
 
-- Introduced ESLint
-- Removed non-existent functions
-- Removed unused code
-- Updated pnpm version in GitHub Actions
+### Changed
 
-[Full Changelog](https://github.com/minagishl/nlobby-mcp/compare/v1.2.1...v1.2.2)
+- Student-card workflow now falls back through multiple Chrome discovery strategies (env paths, bundled Chrome, system channel) before erroring.
 
-## v1.2.1 - 2025-07-15
+### Fixed
 
-- Added installation instructions
+- TypeScript configuration issues uncovered by `tsc --noEmit` for the new Puppeteer logic.
 
-[Full Changelog](https://github.com/minagishl/nlobby-mcp/compare/v1.2.0...v1.2.1)
+[`1.2.3...1.3.0`](https://github.com/minagishl/nlobby-mcp/compare/v1.2.3...v1.3.0)
 
-## v1.2.0 - 2025-07-15
+---
 
-- Implemented automatic User Agent switching
-- Added read option when fetching news details
-- Changed the default number of items retrieved
-- Implemented read status tracking for news
+## 1.2.3 · 2025-09-06
 
-[Full Changelog](https://github.com/minagishl/nlobby-mcp/compare/v1.1.0...v1.2.0)
+### Added
 
-## v1.1.0 - 2025-07-15
+- “Mark all as read” functionality for news items.
 
-- Changed log output for production environment
-- Reduced the number of files after build
-- Added `limit` and `sort` to `get_news`
+[`1.2.2...1.2.3`](https://github.com/minagishl/nlobby-mcp/compare/v1.2.2...v1.2.3)
 
-[Full Changelog](https://github.com/minagishl/nlobby-mcp/compare/v1.0.0...v1.1.0)
+---
+
+## 1.2.2 · 2025-09-06
+
+### Added
+
+- ESLint integration to standardise code quality checks.
+
+### Changed
+
+- Removed non-existent functions and unused code paths.
+- Updated GitHub Actions to rely on the latest pnpm release.
+
+[`1.2.1...1.2.2`](https://github.com/minagishl/nlobby-mcp/compare/v1.2.1...v1.2.2)
+
+---
+
+## 1.2.1 · 2025-07-15
+
+### Added
+
+- Expanded installation instructions for end users.
+
+[`1.2.0...1.2.1`](https://github.com/minagishl/nlobby-mcp/compare/v1.2.0...v1.2.1)
+
+---
+
+## 1.2.0 · 2025-07-15
+
+### Added
+
+- Automatic User-Agent rotation for HTTP requests.
+- Read-status tracking for detailed news entries.
+
+### Changed
+
+- Default news retrieval count increased for better coverage.
+
+[`1.1.0...1.2.0`](https://github.com/minagishl/nlobby-mcp/compare/v1.1.0...v1.2.0)
+
+---
+
+## 1.1.0 · 2025-07-15
+
+### Added
+
+- `limit` and `sort` parameters for `get_news`.
+
+### Changed
+
+- Production logging streamlined and build output trimmed.
+
+[`1.0.0...1.1.0`](https://github.com/minagishl/nlobby-mcp/compare/v1.0.0...v1.1.0)
