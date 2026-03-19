@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-03-20
+
+### Added
+
+- CLI commands for all MCP tools that were previously unavailable from the command line:
+  - `news unread-info` — show unread news count, mentor news count, and important-news flag.
+  - `news read <ids...>` — now accepts multiple IDs in one invocation.
+  - `calendar test [--from] [--to]` — test both personal and school calendar endpoints and report success/event counts.
+  - `calendar filters` — list lobby calendar filter definitions (id, label, colour).
+  - `profile show` — explicit subcommand (was previously the flat `profile` default action).
+  - `profile card` — capture a screenshot of the student ID card and save it as PNG.
+  - `profile update-access` — update the current user's last-access timestamp.
+  - `exam check [date]` — check whether a date (default: today) is an exam day.
+  - `exam finish` — finish exam day mode.
+  - `exam otp` — retrieve the exam one-time password.
+  - `nav menus` — display the main navigation menu categories and items.
+  - `nav notifications` — list notification messages.
+  - `nav interests [--with-icon]` — list user interest tags with optional icon info.
+  - `nav weights` — list interest weight scale definitions.
+  - `health check` — explicit subcommand (was previously the flat `health` default action).
+  - `health debug [--endpoint]` — detailed connection debug report for a given endpoint.
+  - `health page [--endpoint] [--length]` — fetch and display a sample of raw page content.
+  - `health trpc <method> [--params]` — call any tRPC method and print the response.
+  - `health verify` — show full authentication and cookie-synchronisation status across all clients.
+  - `login-help [--email]` — print login guidance and troubleshooting tips, optionally personalised by email address.
+
+### Changed
+
+- Logger rewritten for quiet-by-default behaviour:
+  - Default log level raised to **WARN** — DEBUG and INFO messages are suppressed in both CLI and MCP modes.
+  - Set `NLOBBY_DEBUG=true` (or `DEBUG=true`) to restore full DEBUG-level output.
+  - All log output now goes to **stderr** exclusively, preventing internal messages from polluting stdout and breaking the MCP stdio protocol.
+  - `forceProductionMode()` is now a no-op (retained for API compatibility); production quietness is the unconditional default.
+  - `isProduction` heuristic and the `!process.stdout.isTTY` check removed.
+- `src/index.ts` — removed the now-unnecessary `logger.forceProductionMode()` call before starting the MCP server.
+
 ## [1.4.1] - 2026-03-20
 
 ### Changed
@@ -112,7 +148,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Production logging streamlined and build output trimmed.
 
-[unreleased]: https://github.com/minagishl/nlobby-cli/compare/v1.4.1...HEAD
+[unreleased]: https://github.com/minagishl/nlobby-cli/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/minagishl/nlobby-cli/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/minagishl/nlobby-cli/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/minagishl/nlobby-cli/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/minagishl/nlobby-cli/compare/v1.2.3...v1.3.0
