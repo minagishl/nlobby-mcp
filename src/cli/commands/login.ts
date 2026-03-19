@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { NLobbyApi, saveSessionToDisk } from "../../api/index.js";
 import { BrowserAuth } from "../../auth/browser.js";
+import { CredentialManager } from "../../auth/credentials.js";
 
 export function buildLoginCommand(api: NLobbyApi): Command {
   const login = new Command("login")
@@ -26,6 +27,37 @@ export function buildLoginCommand(api: NLobbyApi): Command {
     });
 
   return login;
+}
+
+export function buildLoginHelpCommand(): Command {
+  const credMgr = new CredentialManager();
+
+  const help = new Command("login-help")
+    .description("Get help and troubleshooting tips for N Lobby login")
+    .option("--email <email>", "Your email address (for personalized guidance)")
+    .action((opts: { email?: string }) => {
+      let msg = "[LOGIN] N Lobby Login Help\n";
+      if (opts.email) {
+        const validation = credMgr.validateEmail(opts.email);
+        msg += `\nEmail: ${opts.email}`;
+        msg += `\nUser type: ${validation.userType}`;
+        msg += `\nValid: ${validation.valid ? "Yes" : "No"}`;
+        if (!validation.valid && validation.message) {
+          msg += `\nIssue: ${validation.message}`;
+        }
+        msg += "\n";
+        msg += credMgr.getLoginGuidance(validation.userType);
+      } else {
+        msg += credMgr.getLoginGuidance("unknown");
+      }
+      msg += "\n";
+      msg += credMgr.getTroubleshootingTips();
+      const stats = credMgr.getSessionStats();
+      msg += `\n\n[STATUS] Session stats: ${stats.total - stats.expired} active, ${stats.expired} expired`;
+      console.log(msg);
+    });
+
+  return help;
 }
 
 export function buildCookiesCommand(api: NLobbyApi): Command {

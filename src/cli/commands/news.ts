@@ -98,12 +98,47 @@ export function buildNewsCommand(api: NLobbyApi): Command {
     });
 
   news
-    .command("read <id>")
-    .description("Mark news as read")
-    .action(async (id: string) => {
+    .command("read <ids...>")
+    .description("Mark one or more news articles as read")
+    .action(async (ids: string[]) => {
+      const errors: { id: string; error: string }[] = [];
+      const success: string[] = [];
+      for (const id of ids) {
+        try {
+          await api.markNewsAsRead(id);
+          success.push(id);
+        } catch (err) {
+          errors.push({
+            id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+      if (success.length > 0) {
+        console.log(`[OK] Marked as read: ${success.join(", ")}`);
+      }
+      if (errors.length > 0) {
+        for (const e of errors) {
+          console.error(`[FAIL] ${e.id}: ${e.error}`);
+        }
+        process.exit(1);
+      }
+    });
+
+  news
+    .command("unread-info")
+    .description("Show unread news count and flags")
+    .option("--json", "Output raw JSON")
+    .action(async (opts: { json?: boolean }) => {
       try {
-        await api.markNewsAsRead(id);
-        console.log(`[OK] Marked ${id} as read.`);
+        const info = await api.getUnreadNewsInfo();
+        if (opts.json) {
+          console.log(JSON.stringify(info, null, 2));
+        } else {
+          console.log(
+            `Unread: ${info.totalCount} (important: ${info.hasImportantNews}, mentor: ${info.byMentorNewsCount})`,
+          );
+        }
       } catch (err) {
         console.error("[FAIL]", err instanceof Error ? err.message : err);
         process.exit(1);

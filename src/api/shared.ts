@@ -35,7 +35,9 @@ export async function fetchRenderedHtml(
     logger.info(
       `[SUCCESS] HTTP response: ${response.status} ${response.statusText}`,
     );
-    logger.info(`[DATA] Content length: ${typeof response.data === "string" ? response.data.length : "unknown"}`);
+    logger.info(
+      `[DATA] Content length: ${typeof response.data === "string" ? response.data.length : "unknown"}`,
+    );
     logger.info(
       `[DATA] Content type: ${response.headers["content-type"] || "unknown"}`,
     );

@@ -23,9 +23,7 @@ type ResponseInterceptorSuccessFn<T = unknown> = (
   response: HttpResponse<T>,
 ) => HttpResponse<T> | Promise<HttpResponse<T>>;
 
-type ResponseInterceptorErrorFn = (
-  error: unknown,
-) => never | Promise<never>;
+type ResponseInterceptorErrorFn = (error: unknown) => never | Promise<never>;
 
 export class HttpClientError extends Error {
   response?: {
