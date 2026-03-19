@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-03-20
+
+### Fixed
+
+- tRPC request URLs were missing the slash between `/api/trpc` and the method name (e.g. `/api/trpcrequiredCourse.getRequiredCourses` → `/api/trpc/requiredCourse.getRequiredCourses`).
+
 ## [1.4.2] - 2026-03-20
 
 ### Added
@@ -148,7 +154,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Production logging streamlined and build output trimmed.
 
-[unreleased]: https://github.com/minagishl/nlobby-cli/compare/v1.4.2...HEAD
+[unreleased]: https://github.com/minagishl/nlobby-cli/compare/v1.4.3...HEAD
+[1.4.3]: https://github.com/minagishl/nlobby-cli/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/minagishl/nlobby-cli/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/minagishl/nlobby-cli/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/minagishl/nlobby-cli/compare/v1.3.0...v1.4.0
