@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Updated `SKILLS.md` to reflect the latest CLI commands: added `login-help`, `exam check/finish/otp`, and `nav menus/notifications/interests/weights`.
+
 ## [1.4.3] - 2026-03-20
 
 ### Fixed

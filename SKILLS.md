@@ -5,6 +5,7 @@
 | Command                        | Options / Arguments                                                                                 | Description                                |
 | ------------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------ |
 | `nlobby login`                 |                                                                                                     | Open browser for interactive login         |
+| `nlobby login-help`            | `--email <email>`                                                                                   | Get login help and troubleshooting tips    |
 | `nlobby cookies set <cookies>` |                                                                                                     | Set cookies manually                       |
 | `nlobby cookies check`         |                                                                                                     | Show current authentication status         |
 | `nlobby news`                  | `--limit <n>` `--category <cat>` `--sort newest\|oldest\|title-asc\|title-desc` `--unread` `--json` | List news (default: 10, newest first)      |
@@ -15,6 +16,13 @@
 | `nlobby courses`               | `--grade <n>` `--semester <n>` `--json`                                                             | Show required courses                      |
 | `nlobby profile`               | `--json`                                                                                            | Show user profile / account info           |
 | `nlobby health`                | `--json`                                                                                            | Check API connectivity and authentication  |
+| `nlobby exam check [date]`     | `--json`                                                                                            | Check if a date is an exam day             |
+| `nlobby exam finish`           | `--json`                                                                                            | Finish exam day mode                       |
+| `nlobby exam otp`              | `--json`                                                                                            | Get one-time password for exam             |
+| `nlobby nav menus`             | `--json`                                                                                            | Show main navigation menu list             |
+| `nlobby nav notifications`     | `--json`                                                                                            | Show notification messages                 |
+| `nlobby nav interests`         | `--with-icon` `--json`                                                                              | Show user interest tags                    |
+| `nlobby nav weights`           | `--json`                                                                                            | Show interest weight scale definitions     |
 | `nlobby serve` / `nlobby mcp`  |                                                                                                     | Start MCP server (stdio transport)         |
 
 > All commands support `--json` to output raw JSON instead of formatted text.
