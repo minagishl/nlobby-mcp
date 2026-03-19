@@ -2,30 +2,76 @@
 
 ## CLI Commands
 
-| Command                        | Options / Arguments                                                                                 | Description                                |
-| ------------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `nlobby login`                 |                                                                                                     | Open browser for interactive login         |
-| `nlobby login-help`            | `--email <email>`                                                                                   | Get login help and troubleshooting tips    |
-| `nlobby cookies set <cookies>` |                                                                                                     | Set cookies manually                       |
-| `nlobby cookies check`         |                                                                                                     | Show current authentication status         |
-| `nlobby news`                  | `--limit <n>` `--category <cat>` `--sort newest\|oldest\|title-asc\|title-desc` `--unread` `--json` | List news (default: 10, newest first)      |
-| `nlobby news show <id>`        | `--json`                                                                                            | Show news article detail                   |
-| `nlobby news read <id>`        |                                                                                                     | Mark news article as read                  |
-| `nlobby schedule [date]`       | `--json`                                                                                            | Show schedule (YYYY-MM-DD, default: today) |
-| `nlobby calendar`              | `--from <date>` `--to <date>` `--type personal\|school` `--json`                                    | Show calendar events (default: this week)  |
-| `nlobby courses`               | `--grade <n>` `--semester <n>` `--json`                                                             | Show required courses                      |
-| `nlobby profile`               | `--json`                                                                                            | Show user profile / account info           |
-| `nlobby health`                | `--json`                                                                                            | Check API connectivity and authentication  |
-| `nlobby exam check [date]`     | `--json`                                                                                            | Check if a date is an exam day             |
-| `nlobby exam finish`           | `--json`                                                                                            | Finish exam day mode                       |
-| `nlobby exam otp`              | `--json`                                                                                            | Get one-time password for exam             |
-| `nlobby nav menus`             | `--json`                                                                                            | Show main navigation menu list             |
-| `nlobby nav notifications`     | `--json`                                                                                            | Show notification messages                 |
-| `nlobby nav interests`         | `--with-icon` `--json`                                                                              | Show user interest tags                    |
-| `nlobby nav weights`           | `--json`                                                                                            | Show interest weight scale definitions     |
-| `nlobby serve` / `nlobby mcp`  |                                                                                                     | Start MCP server (stdio transport)         |
-
 > All commands support `--json` to output raw JSON instead of formatted text.
+
+### Auth
+
+| Command                        | Options / Arguments | Description                         |
+| ------------------------------ | ------------------- | ----------------------------------- |
+| `nlobby login`                 |                     | Open browser for interactive login  |
+| `nlobby login-help`            | `--email <email>`   | Login help and troubleshooting tips |
+| `nlobby cookies set <cookies>` |                     | Set cookies manually                |
+| `nlobby cookies check`         |                     | Show current authentication status  |
+
+### News
+
+| Command                   | Options / Arguments                                                                                 | Description                       |
+| ------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `nlobby news`             | `--limit <n>` `--category <cat>` `--sort newest\|oldest\|title-asc\|title-desc` `--unread` `--json` | List news (default: 10, newest)   |
+| `nlobby news show <id>`   | `--json`                                                                                            | Show news article detail          |
+| `nlobby news read <ids…>` |                                                                                                     | Mark one or more articles as read |
+| `nlobby news unread-info` | `--json`                                                                                            | Show unread count and flags       |
+
+### Schedule & Calendar
+
+| Command                   | Options / Arguments                                              | Description                                |
+| ------------------------- | ---------------------------------------------------------------- | ------------------------------------------ |
+| `nlobby schedule [date]`  | `--json`                                                         | Show schedule (YYYY-MM-DD, default: today) |
+| `nlobby calendar`         | `--from <date>` `--to <date>` `--type personal\|school` `--json` | Show calendar events (default: this week)  |
+| `nlobby calendar test`    | `--from <date>` `--to <date>` `--json`                           | Test both calendar endpoints               |
+| `nlobby calendar filters` | `--json`                                                         | Show lobby calendar filter list            |
+
+### Courses & Exam
+
+| Command                    | Options / Arguments                     | Description                    |
+| -------------------------- | --------------------------------------- | ------------------------------ |
+| `nlobby courses`           | `--grade <n>` `--semester <n>` `--json` | Show required courses          |
+| `nlobby exam check [date]` | `--json`                                | Check if a date is an exam day |
+| `nlobby exam finish`       | `--json`                                | Finish exam day mode           |
+| `nlobby exam otp`          | `--json`                                | Get one-time password for exam |
+
+### Profile
+
+| Command                        | Options / Arguments | Description                         |
+| ------------------------------ | ------------------- | ----------------------------------- |
+| `nlobby profile`               | `--json`            | Show account info from Next.js page |
+| `nlobby profile card`          |                     | Capture student ID card screenshot  |
+| `nlobby profile update-access` | `--json`            | Update last access timestamp        |
+
+### Navigation & Interests
+
+| Command                    | Options / Arguments    | Description                            |
+| -------------------------- | ---------------------- | -------------------------------------- |
+| `nlobby nav menus`         | `--json`               | Show main navigation menu list         |
+| `nlobby nav notifications` | `--json`               | Show notification messages             |
+| `nlobby nav interests`     | `--with-icon` `--json` | Show user interest tags                |
+| `nlobby nav weights`       | `--json`               | Show interest weight scale definitions |
+
+### Health & Debug
+
+| Command                       | Options / Arguments                | Description                               |
+| ----------------------------- | ---------------------------------- | ----------------------------------------- |
+| `nlobby health`               | `--json`                           | Check API connectivity and authentication |
+| `nlobby health debug`         | `--endpoint <path>`                | Debug connection with detailed info       |
+| `nlobby health page`          | `--endpoint <path>` `--length <n>` | Fetch and sample raw page content         |
+| `nlobby health trpc <method>` | `--params <json>` `--json`         | Test a tRPC endpoint directly             |
+| `nlobby health verify`        |                                    | Verify cookie sync across all clients     |
+
+### MCP Server
+
+| Command                       | Description                        |
+| ----------------------------- | ---------------------------------- |
+| `nlobby serve` / `nlobby mcp` | Start MCP server (stdio transport) |
 
 ---
 

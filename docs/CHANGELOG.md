@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Rewrote `SKILLS.md` CLI section: grouped commands by topic and added all previously undocumented subcommands (`news unread-info`, `calendar test`, `calendar filters`, `profile card`, `profile update-access`, `health debug`, `health page`, `health trpc`, `health verify`).
+
 ## [1.4.4] - 2026-03-20
 
 ### Fixed
