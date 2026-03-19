@@ -1,7 +1,7 @@
 import type { ApiContext } from "./context.js";
 import { CONFIG } from "../config.js";
 import { logger } from "../logger.js";
-import type { AxiosError } from "../types.js";
+import { HttpClientError } from "../http-client.js";
 
 export async function healthCheck(ctx: ApiContext): Promise<boolean> {
   logger.info("[INFO] Running N Lobby API health check...");
@@ -143,7 +143,7 @@ export async function debugConnection(
       `[STATUS] Status: ${response.status} ${response.statusText}`,
     );
     debugReport.push(
-      `[SIZE] Content Length: ${response.data?.length || "unknown"}`,
+      `[SIZE] Content Length: ${typeof response.data === "string" ? response.data.length : "unknown"}`,
     );
 
     if (typeof response.data === "string") {
@@ -175,10 +175,9 @@ export async function debugConnection(
     }
   } catch (error) {
     debugReport.push("[ERROR] Basic connectivity failed");
-    if (error && typeof error === "object" && "response" in error) {
-      const axiosError = error as AxiosError;
+    if (error instanceof HttpClientError) {
       debugReport.push(
-        `[STATUS] Error Status: ${axiosError.response?.status || "unknown"}`,
+        `[STATUS] Error Status: ${error.response?.status || "unknown"}`,
       );
     } else {
       debugReport.push(
@@ -189,14 +188,14 @@ export async function debugConnection(
 
   debugReport.push("");
   debugReport.push("[NETWORK] Network Information:");
-  debugReport.push(`[URL] Base URL: ${ctx.httpClient.defaults.baseURL}`);
+  debugReport.push(`[URL] Base URL: ${ctx.httpClient.defaults.baseURL ?? ""}`);
   debugReport.push(`[TIMEOUT] Timeout: ${ctx.httpClient.defaults.timeout}ms`);
 
   debugReport.push("");
   debugReport.push("=".repeat(50));
   debugReport.push("[TARGET] Recommendations:");
 
-  const hasHttpCookies = !!ctx.httpClient.defaults.headers.Cookie;
+  const hasHttpCookies = !!ctx.httpClient.defaults.headers["Cookie"];
   const hasNextAuthCookies = ctx.nextAuth.isAuthenticated();
 
   if (!hasHttpCookies && !hasNextAuthCookies) {
@@ -271,9 +270,8 @@ export async function testPageContent(
   } catch (error) {
     logger.error(`[ERROR] Failed to test page content for ${endpoint}:`, error);
 
-    if (error && typeof error === "object" && "response" in error) {
-      const axiosError = error as AxiosError;
-      return `Error ${axiosError.response?.status || "unknown"}: ${axiosError.message || "Unknown error"}`;
+    if (error instanceof HttpClientError) {
+      return `Error ${error.response?.status || "unknown"}: ${error.message || "Unknown error"}`;
     }
 
     return `Error: ${error instanceof Error ? error.message : "Unknown error"}`;
@@ -310,11 +308,10 @@ export async function testTrpcEndpoint(
       timestamp: new Date().toISOString(),
     };
 
-    if (error && typeof error === "object" && "response" in error) {
-      const axiosError = error as AxiosError;
-      errorInfo.status = axiosError.response?.status;
-      errorInfo.statusText = axiosError.response?.statusText;
-      errorInfo.responseData = axiosError.response?.data;
+    if (error instanceof HttpClientError) {
+      errorInfo.status = error.response?.status;
+      errorInfo.statusText = error.response?.statusText;
+      errorInfo.responseData = error.response?.data;
     }
 
     return errorInfo;

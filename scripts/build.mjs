@@ -41,7 +41,7 @@ async function buildBundle() {
         "playwright",
         "puppeteer",
         "cheerio",
-        "axios",
+        "node-fetch",
         "dotenv",
         "zod",
         "commander",

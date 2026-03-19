@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-03-20
+
 ### Changed
 
+- Replaced `axios` with `node-fetch` as the HTTP client throughout the codebase.
+- `src/http-client.ts` introduced as a lightweight `HttpClient` wrapper around node-fetch, providing `get()`/`post()`, interceptors, per-request `headers`/`timeout`/`params`, and `defaults.headers`/`timeout`/`baseURL`.
+- `AxiosInstance` type references replaced with `HttpClient` in `ApiContext`, `NLobbyApi`, and `TRPCClient`.
+- `AxiosError` / `AxiosErrorResponse` / `AxiosErrorConfig` types removed from `types.ts`; error handling now uses `HttpClientError`.
 - Renamed all package names to CLI
 - Change the folders monitored by ES Lint
 
@@ -47,11 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mode detection in `src/index.ts`: explicit `serve`/`mcp` argument or piped stdin → MCP mode; otherwise CLI mode.
 - `commander` added as a production dependency.
 
-[`1.3.0...1.4.0`](https://github.com/minagishl/nlobby-mcp/compare/v1.3.0...v1.4.0)
-
----
-
-## 1.3.0 · 2025-11-04
+## [1.3.0] - 2025-11-04
 
 ### Added
 
@@ -66,21 +68,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - TypeScript configuration issues uncovered by `tsc --noEmit` for the new Puppeteer logic.
 
-[`1.2.3...1.3.0`](https://github.com/minagishl/nlobby-mcp/compare/v1.2.3...v1.3.0)
-
----
-
-## 1.2.3 · 2025-09-06
+## [1.2.3] - 2025-09-06
 
 ### Added
 
-- “Mark all as read” functionality for news items.
+- "Mark all as read" functionality for news items.
 
-[`1.2.2...1.2.3`](https://github.com/minagishl/nlobby-mcp/compare/v1.2.2...v1.2.3)
-
----
-
-## 1.2.2 · 2025-09-06
+## [1.2.2] - 2025-09-06
 
 ### Added
 
@@ -91,21 +85,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed non-existent functions and unused code paths.
 - Updated GitHub Actions to rely on the latest pnpm release.
 
-[`1.2.1...1.2.2`](https://github.com/minagishl/nlobby-mcp/compare/v1.2.1...v1.2.2)
-
----
-
-## 1.2.1 · 2025-07-15
+## [1.2.1] - 2025-07-15
 
 ### Added
 
 - Expanded installation instructions for end users.
 
-[`1.2.0...1.2.1`](https://github.com/minagishl/nlobby-mcp/compare/v1.2.0...v1.2.1)
-
----
-
-## 1.2.0 · 2025-07-15
+## [1.2.0] - 2025-07-15
 
 ### Added
 
@@ -116,11 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Default news retrieval count increased for better coverage.
 
-[`1.1.0...1.2.0`](https://github.com/minagishl/nlobby-mcp/compare/v1.1.0...v1.2.0)
-
----
-
-## 1.1.0 · 2025-07-15
+## [1.1.0] - 2025-07-15
 
 ### Added
 
@@ -130,4 +112,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Production logging streamlined and build output trimmed.
 
-[`1.0.0...1.1.0`](https://github.com/minagishl/nlobby-mcp/compare/v1.0.0...v1.1.0)
+[unreleased]: https://github.com/minagishl/nlobby-cli/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/minagishl/nlobby-cli/compare/v1.4.0...v1.4.1
+[1.4.0]: https://github.com/minagishl/nlobby-cli/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/minagishl/nlobby-cli/compare/v1.2.3...v1.3.0
+[1.2.3]: https://github.com/minagishl/nlobby-cli/compare/v1.2.2...v1.2.3
+[1.2.2]: https://github.com/minagishl/nlobby-cli/compare/v1.2.1...v1.2.2
+[1.2.1]: https://github.com/minagishl/nlobby-cli/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/minagishl/nlobby-cli/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/minagishl/nlobby-cli/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/minagishl/nlobby-cli/releases/tag/v1.0.0

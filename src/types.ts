@@ -390,28 +390,6 @@ export interface CalendarEvent {
   [key: string]: unknown;
 }
 
-// Axios error types
-export interface AxiosErrorResponse {
-  status?: number;
-  statusText?: string;
-  data?: unknown;
-  headers?: Record<string, string>;
-}
-
-export interface AxiosErrorConfig {
-  url?: string;
-  method?: string;
-  headers?: Record<string, string>;
-  timeout?: number;
-}
-
-export interface AxiosError {
-  response?: AxiosErrorResponse;
-  config?: AxiosErrorConfig;
-  message?: string;
-  [key: string]: unknown;
-}
-
 // API response data types
 export interface ApiResponseData {
   result?: {

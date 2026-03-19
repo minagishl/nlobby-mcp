@@ -9,7 +9,6 @@ import type {
   NewsData,
   NewsItem,
   UnreadNewsInfo,
-  AxiosError,
 } from "../types.js";
 
 // ---- Private helpers ----

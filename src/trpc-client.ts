@@ -1,8 +1,7 @@
-import axios, { AxiosInstance } from "axios";
+import { HttpClient, HttpClientError } from "./http-client.js";
 import { CONFIG } from "./config.js";
 import { NextAuthHandler } from "./auth/nextauth.js";
 import { logger } from "./logger.js";
-import { AxiosError, NetworkError } from "./types.js";
 
 export interface TRPCRequest {
   id: number;
@@ -24,14 +23,14 @@ export type TRPCBatchRequest = Array<TRPCRequest>;
 export type TRPCBatchResponse = Array<TRPCResponse>;
 
 export class TRPCClient {
-  private httpClient: AxiosInstance;
+  private httpClient: HttpClient;
   private nextAuth: NextAuthHandler;
   private requestId: number = 1;
   private allCookies: string = "";
 
   constructor(nextAuth: NextAuthHandler) {
     this.nextAuth = nextAuth;
-    this.httpClient = axios.create({
+    this.httpClient = new HttpClient({
       baseURL: `${CONFIG.nlobby.baseUrl}/api/trpc`,
       timeout: 15000,
       headers: {
@@ -134,32 +133,33 @@ export class TRPCClient {
         });
         return response;
       },
-      async (error) => {
+      async (error): Promise<never> => {
+        const err = error instanceof HttpClientError ? error : null;
         logger.error("[ERROR] tRPC request failed:", {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          message: error.message,
-          url: error.config?.url,
+          status: err?.response?.status,
+          statusText: err?.response?.statusText,
+          message: error instanceof Error ? error.message : "Unknown error",
+          url: err?.config?.url,
         });
 
-        if (error.response?.status === 401) {
+        if (err?.response?.status === 401) {
           logger.error(
             "[BLOCKED] Authentication failed - NextAuth session may be expired",
           );
           throw new Error(
             "Authentication expired. Please re-authenticate with NextAuth cookies.",
           );
-        } else if (error.response?.status === 403) {
+        } else if (err?.response?.status === 403) {
           logger.error("[BLOCKED] Access forbidden - insufficient permissions");
           throw new Error(
             "Access forbidden. Check your permissions or re-authenticate.",
           );
-        } else if (error.response?.status === 404) {
+        } else if (err?.response?.status === 404) {
           logger.error("[BLOCKED] tRPC endpoint not found");
           throw new Error("tRPC endpoint not found. The API may have changed.");
         }
 
-        return Promise.reject(error);
+        return Promise.reject(error) as never;
       },
     );
   }
@@ -254,48 +254,43 @@ export class TRPCClient {
         stack: error instanceof Error ? error.stack : undefined,
       });
 
-      // Enhanced axios error logging
-      if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as AxiosError;
-        logger.error(`[DEBUG] tRPC ${method} Axios error details:`, {
-          status: axiosError.response?.status,
-          statusText: axiosError.response?.statusText,
-          headers: axiosError.response?.headers,
-          data: axiosError.response?.data,
-          url: axiosError.config?.url,
-          method: axiosError.config?.method,
-          timeout: axiosError.config?.timeout,
-          cookies: axiosError.config?.headers?.Cookie ? "present" : "missing",
+      // Enhanced error logging
+      if (error instanceof HttpClientError) {
+        logger.error(`[DEBUG] tRPC ${method} fetch error details:`, {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          headers: error.response?.headers,
+          data: error.response?.data,
+          url: error.config?.url,
+          method: error.config?.method,
+          timeout: error.config?.timeout,
+          cookies: error.config?.headers?.Cookie ? "present" : "missing",
         });
 
         // Check for specific error types
-        if (axiosError.response?.status === 401) {
+        if (error.response?.status === 401) {
           logger.error(
             "[BLOCKED] tRPC 401 Unauthorized - session may be expired or invalid",
           );
-        } else if (axiosError.response?.status === 403) {
+        } else if (error.response?.status === 403) {
           logger.error(
             "[BLOCKED] tRPC 403 Forbidden - insufficient permissions",
           );
-        } else if (axiosError.response?.status === 404) {
+        } else if (error.response?.status === 404) {
           logger.error("[BLOCKED] tRPC 404 Not Found - endpoint may not exist");
-        } else if (
-          axiosError.response?.status &&
-          axiosError.response.status >= 500
-        ) {
+        } else if (error.response?.status && error.response.status >= 500) {
           logger.error("[BLOCKED] tRPC Server Error - N Lobby backend issue");
         }
-      } else if (error && typeof error === "object" && "code" in error) {
-        const networkError = error as NetworkError;
-        if (networkError.code === "ECONNREFUSED") {
+
+        if (error.code === "ECONNREFUSED") {
           logger.error(
             "[NETWORK] Network Error: Connection refused - N Lobby may be down",
           );
-        } else if (networkError.code === "ETIMEDOUT") {
+        } else if (error.code === "ETIMEDOUT") {
           logger.error(
             "[TIMEOUT] Network Error: Request timeout - slow network or server overload",
           );
-        } else if (networkError.code === "ENOTFOUND") {
+        } else if (error.code === "ENOTFOUND") {
           logger.error(
             "[NETWORK] Network Error: DNS lookup failed - check internet connection",
           );

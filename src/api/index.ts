@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from "axios";
+import { HttpClient } from "../http-client.js";
 import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -90,7 +90,7 @@ export function saveSessionToDisk(cookies: string): void {
 }
 
 export class NLobbyApi implements ApiContext {
-  httpClient: AxiosInstance;
+  httpClient: HttpClient;
   nextAuth: NextAuthHandler;
   trpcClient: TRPCClient;
   private session: NLobbySession | null = null;
@@ -99,7 +99,7 @@ export class NLobbyApi implements ApiContext {
     this.nextAuth = new NextAuthHandler();
     this.trpcClient = new TRPCClient(this.nextAuth);
 
-    this.httpClient = axios.create({
+    this.httpClient = new HttpClient({
       baseURL: CONFIG.nlobby.baseUrl,
       timeout: 10000,
       headers: {
@@ -128,11 +128,17 @@ export class NLobbyApi implements ApiContext {
 
     this.httpClient.interceptors.response.use(
       (response) => response,
-      async (error) => {
-        if (error.response?.status === 401 && this.session) {
+      async (error): Promise<never> => {
+        if (
+          error instanceof Error &&
+          "response" in error &&
+          (error as { response?: { status?: number } }).response?.status ===
+            401 &&
+          this.session
+        ) {
           throw new Error("Authentication expired. Please re-authenticate.");
         }
-        return Promise.reject(error);
+        return Promise.reject(error) as never;
       },
     );
   }
@@ -141,7 +147,7 @@ export class NLobbyApi implements ApiContext {
     if (!cookies || cookies.trim() === "") {
       return;
     }
-    this.httpClient.defaults.headers.Cookie = cookies;
+    this.httpClient.defaults.headers["Cookie"] = cookies;
     this.nextAuth.setCookies(cookies);
     this.trpcClient.setAllCookies(cookies);
   }
@@ -166,14 +172,14 @@ export class NLobbyApi implements ApiContext {
   }
 
   getCookieStatus(): string {
-    const hasHttpCookies = !!this.httpClient.defaults.headers.Cookie;
+    const hasHttpCookies = !!this.httpClient.defaults.headers["Cookie"];
     const hasNextAuthCookies = this.nextAuth.isAuthenticated();
     const nextAuthCookies = this.nextAuth.getCookies();
     const hasTrpcCookies = !!(
       this.trpcClient as unknown as { allCookies?: string }
     ).allCookies;
 
-    const httpCookieString = this.httpClient.defaults.headers.Cookie;
+    const httpCookieString = this.httpClient.defaults.headers["Cookie"];
     const httpCookieLength =
       typeof httpCookieString === "string" ? httpCookieString.length : 0;
     const trpcCookieLength =

@@ -1,9 +1,9 @@
-import type { AxiosInstance } from "axios";
+import type { HttpClient } from "../http-client.js";
 import type { NextAuthHandler } from "../auth/nextauth.js";
 import type { TRPCClient } from "../trpc-client.js";
 
 export interface ApiContext {
-  httpClient: AxiosInstance;
+  httpClient: HttpClient;
   nextAuth: NextAuthHandler;
   trpcClient: TRPCClient;
   getCookieStatus(): string;

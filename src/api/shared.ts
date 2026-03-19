@@ -1,7 +1,7 @@
 import type { ApiContext } from "./context.js";
 import { CONFIG } from "../config.js";
 import { logger } from "../logger.js";
-import type { AxiosError } from "../types.js";
+import { HttpClientError } from "../http-client.js";
 
 export async function fetchRenderedHtml(
   ctx: ApiContext,
@@ -12,7 +12,7 @@ export async function fetchRenderedHtml(
     logger.debug(`[URL] URL: ${CONFIG.nlobby.baseUrl + url}`);
     logger.info(
       "[COOKIE] Cookies:",
-      ctx.httpClient.defaults.headers.Cookie ? "present" : "missing",
+      ctx.httpClient.defaults.headers["Cookie"] ? "present" : "missing",
     );
 
     const response = await ctx.httpClient.get(url, {
@@ -35,7 +35,7 @@ export async function fetchRenderedHtml(
     logger.info(
       `[SUCCESS] HTTP response: ${response.status} ${response.statusText}`,
     );
-    logger.info(`[DATA] Content length: ${response.data?.length || "unknown"}`);
+    logger.info(`[DATA] Content length: ${typeof response.data === "string" ? response.data.length : "unknown"}`);
     logger.info(
       `[DATA] Content type: ${response.headers["content-type"] || "unknown"}`,
     );
@@ -75,13 +75,12 @@ export async function fetchRenderedHtml(
       error instanceof Error ? error.message : "Unknown error",
     );
 
-    if (error && typeof error === "object" && "response" in error) {
-      const axiosError = error as AxiosError;
+    if (error instanceof HttpClientError) {
       logger.debug("[DEBUG] HTTP Error Details:", {
-        status: axiosError.response?.status,
-        statusText: axiosError.response?.statusText,
-        url: axiosError.config?.url,
-        hasData: Boolean(axiosError.response?.data),
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        url: error.config?.url,
+        hasData: Boolean(error.response?.data),
       });
     }
 

@@ -1,6 +1,7 @@
 import type { ApiContext } from "./context.js";
 import { CONFIG } from "../config.js";
 import { logger } from "../logger.js";
+import { HttpClientError } from "../http-client.js";
 import type {
   NLobbyScheduleItem,
   GoogleCalendarEvent,
@@ -9,7 +10,6 @@ import type {
   CalendarApiResponse,
   ApiResponseData,
   CalendarEvent,
-  AxiosError,
   LobbyCalendarFilter,
 } from "../types.js";
 
@@ -185,13 +185,10 @@ export async function getGoogleCalendarEvents(
   } catch (error) {
     logger.error(`[ERROR] Error fetching Google Calendar events:`, error);
 
-    if (error && typeof error === "object" && "response" in error) {
-      const axiosError = error as AxiosError;
-      if (axiosError.response?.status === 401) {
-        throw new Error(
-          "Authentication required. Please use the set_cookies tool to provide valid NextAuth.js session cookies from N Lobby.",
-        );
-      }
+    if (error instanceof HttpClientError && error.response?.status === 401) {
+      throw new Error(
+        "Authentication required. Please use the set_cookies tool to provide valid NextAuth.js session cookies from N Lobby.",
+      );
     }
 
     throw error;

@@ -1,4 +1,3 @@
-import axios, { AxiosInstance } from "axios";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -452,13 +451,7 @@ export async function getStudentCardScreenshot(ctx: ApiContext): Promise<{
   const targetUrl = `https://${secureHost}/mypage/student_card/index`;
   const callbackUrl = `https://nlobby.nnn.ed.jp/mypage/v1/callback?redirect_uri=${encodeURIComponent(targetUrl)}`;
 
-  const rawCookieHeader = ctx.httpClient.defaults.headers.Cookie;
-  const cookieHeader =
-    typeof rawCookieHeader === "string"
-      ? rawCookieHeader
-      : rawCookieHeader === undefined || rawCookieHeader === null
-        ? undefined
-        : String(rawCookieHeader);
+  const cookieHeader = ctx.httpClient.defaults.headers["Cookie"];
 
   if (!cookieHeader) {
     throw new Error(
