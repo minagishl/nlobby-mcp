@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { logger } from "./logger.js";
+import { logger } from "../logger.js";
 
 export interface StoredCredentials {
   emailHash: string;
@@ -11,16 +11,10 @@ export class CredentialManager {
   private credentialStore: Map<string, StoredCredentials> = new Map();
   private readonly SESSION_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
 
-  /**
-   * Hash email for secure storage (one-way hash)
-   */
   private hashEmail(email: string): string {
     return createHash("sha256").update(email).digest("hex");
   }
 
-  /**
-   * Validate email format for N High School Group
-   */
   validateEmail(email: string): {
     valid: boolean;
     userType: "student" | "staff" | "parent" | "unknown";
@@ -38,7 +32,6 @@ export class CredentialManager {
 
     const domain = email.split("@")[1].toLowerCase();
 
-    // N High School Group domains
     if (domain === "nnn.ed.jp") {
       return { valid: true, userType: "student" };
     } else if (domain === "nnn.ac.jp") {
@@ -51,13 +44,10 @@ export class CredentialManager {
     ) {
       return { valid: true, userType: "parent" };
     } else {
-      return { valid: true, userType: "parent" }; // Allow other domains for parents
+      return { valid: true, userType: "parent" };
     }
   }
 
-  /**
-   * Store session info after successful login
-   */
   storeSession(email: string): void {
     const emailHash = this.hashEmail(email);
     const stored: StoredCredentials = {
@@ -70,9 +60,6 @@ export class CredentialManager {
     logger.info(`Session stored for user: ${email.split("@")[0]}@***`);
   }
 
-  /**
-   * Check if user has a valid recent session
-   */
   hasValidSession(email: string): boolean {
     const emailHash = this.hashEmail(email);
     const stored = this.credentialStore.get(emailHash);
@@ -91,18 +78,12 @@ export class CredentialManager {
     return stored.sessionValid;
   }
 
-  /**
-   * Invalidate session
-   */
   invalidateSession(email: string): void {
     const emailHash = this.hashEmail(email);
     this.credentialStore.delete(emailHash);
     logger.info(`Session invalidated for user: ${email.split("@")[0]}@***`);
   }
 
-  /**
-   * Get login guidance based on user type
-   */
   getLoginGuidance(
     userType: "student" | "staff" | "parent" | "unknown",
   ): string {
@@ -141,9 +122,6 @@ export class CredentialManager {
     }
   }
 
-  /**
-   * Get troubleshooting tips for common issues
-   */
   getTroubleshootingTips(): string {
     return `
 [TIPS] Common Login Issues & Solutions:
@@ -178,9 +156,6 @@ export class CredentialManager {
 - You can close the browser once login is complete`;
   }
 
-  /**
-   * Clean up expired sessions
-   */
   cleanupExpiredSessions(): void {
     const now = Date.now();
     let cleanedCount = 0;
@@ -197,9 +172,6 @@ export class CredentialManager {
     }
   }
 
-  /**
-   * Get session statistics
-   */
   getSessionStats(): { total: number; expired: number } {
     const now = Date.now();
     let expired = 0;

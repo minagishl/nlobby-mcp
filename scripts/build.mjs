@@ -44,6 +44,7 @@ async function buildBundle() {
         "axios",
         "dotenv",
         "zod",
+        "commander",
         "@modelcontextprotocol/sdk",
       ],
       minify: true,

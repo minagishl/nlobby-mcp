@@ -1,26 +1,26 @@
-# N Lobby MCP Server
+# N Lobby CLI & MCP Server
 
-> **Note:** The developer assumes no responsibility for any damages that may occur from using this MCP server. This software was developed for educational purposes and its operation is not guaranteed.
+> **Note:** The developer assumes no responsibility for any damages that may occur from using this tool. This software was developed for educational purposes and its operation is not guaranteed.
 
-A Model Context Protocol (MCP) server for accessing N Lobby school portal data. This server provides secure access to school information including announcements, schedules, and learning resources through browser-based authentication.
+A dual-mode CLI and Model Context Protocol (MCP) server for accessing N Lobby school portal data. Use it interactively from the terminal with `nlobby`, or connect it to an AI assistant as an MCP server with `nlobby serve`.
 
 ## Features
 
-- **Browser-based Authentication**: Interactive login via automated browser window
-- **Cookie-based Session Management**: Secure session handling with NextAuth.js cookies
+- **CLI Mode**: Access N Lobby data directly from the terminal — news, schedule, courses, profile, and more
+- **MCP Mode**: Full MCP server compatible with Claude, Cursor, and other MCP-enabled AI assistants
+- **Browser-based Authentication**: Interactive login via automated Puppeteer browser window
+- **Session Persistence**: CLI mode saves cookies to `~/.nlobby/session` for seamless subsequent use
 - **School Information Access**: Retrieve announcements, schedules, and learning resources
 - **Required Courses Management**: Access required course information and academic data
 - **Multiple Calendar Types**: Support for both personal and school calendars
 - **User Role Support**: Different access levels for students, parents, and staff
-- **MCP Protocol Compliance**: Full compatibility with MCP-enabled AI assistants
-- **Advanced Testing Tools**: Built-in debugging and testing capabilities
 
 ## Installation
 
 ### Option 1: Install from npm (Recommended)
 
 ```bash
-npm install -g nlobby-mcp
+npm install -g nlobby-cli
 ```
 
 ### Option 2: Development Installation
@@ -38,14 +38,7 @@ cd nlobby-mcp
 pnpm install
 ```
 
-3. Set up environment variables:
-
-```bash
-cp .env.example .env
-# Edit .env if needed (default values should work)
-```
-
-4. Build the project:
+3. Build the project:
 
 ```bash
 pnpm run build
@@ -53,39 +46,101 @@ pnpm run build
 
 ## Configuration
 
-Create a `.env` file with the following variables (optional, defaults provided):
+Create a `.env` file if you need to override defaults (optional):
 
 ```env
-# N Lobby Configuration
 NLOBBY_BASE_URL=https://nlobby.nnn.ed.jp
-
-# MCP Server Configuration
 MCP_SERVER_NAME=nlobby-mcp
 MCP_SERVER_VERSION=1.0.0
 ```
 
-## Usage
+---
 
-### Running the Server
+## CLI Usage
 
-For npm installation:
-
-```bash
-nlobby-mcp
-```
-
-For development installation:
+### Authentication
 
 ```bash
-pnpm run start
+# Interactive browser login (recommended)
+nlobby login
+
+# Set cookies manually
+nlobby cookies set "__Secure-next-auth.session-token=ey...;"
+
+# Check current authentication status
+nlobby cookies check
 ```
+
+### News
+
+```bash
+# List latest news (default: 10, newest first)
+nlobby news
+
+# Filter and sort
+nlobby news --limit 20 --category お知らせ --sort oldest --unread
+
+# Show full article
+nlobby news show 980
+
+# Mark as read
+nlobby news read 980
+```
+
+### Schedule & Calendar
+
+```bash
+# Today's schedule
+nlobby schedule
+
+# Specific date
+nlobby schedule 2026-04-01
+
+# This week's personal calendar
+nlobby calendar
+
+# School calendar for a date range
+nlobby calendar --type school --from 2026-04-01 --to 2026-04-07
+```
+
+### Courses
+
+```bash
+# All required courses
+nlobby courses
+
+# Filter by grade / semester
+nlobby courses --grade 2 --semester 2025
+```
+
+### Profile & Health
+
+```bash
+nlobby profile
+nlobby health
+```
+
+### MCP Server
+
+```bash
+# Start MCP server (stdio transport)
+nlobby serve
+# or
+nlobby mcp
+```
+
+> All commands support `--json` to output raw JSON instead of formatted text.
+
+---
+
+## MCP Usage
 
 <details>
 <summary>Setup with Cursor and Other MCP Clients</summary>
 
 ### Cursor IDE Setup
 
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=nlobby&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIm5sb2JieS1tY3AiXSwiZW52Ijp7Ik5MT0JCWV9CQVNFX1VSTCI6Imh0dHBzOi8vbmxvYmJ5Lm5ubi5lZC5qcCJ9fQ%3D%3D)
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](cursor://anysphere.cursor-deeplink/mcp/install?name=nlobby&config=eyJlbnYiOnsiTkxPQkJZX0JBU0VfVVJMIjoiaHR0cHM6Ly9ubG9iYnkubm5uLmVkLmpwIn0sImNvbW1hbmQiOiJucHggLXkgbmxvYmJ5LWNsaSBzZXJ2ZSJ9)
 
 Add the following to your Cursor settings (`~/.cursor/config.json`):
 
@@ -94,7 +149,7 @@ Add the following to your Cursor settings (`~/.cursor/config.json`):
   "mcpServers": {
     "nlobby": {
       "command": "npx",
-      "args": ["-y", "nlobby-mcp"],
+      "args": ["-y", "nlobby-cli", "serve"],
       "env": {
         "NLOBBY_BASE_URL": "https://nlobby.nnn.ed.jp"
       }
@@ -112,7 +167,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
   "mcpServers": {
     "nlobby": {
       "command": "npx",
-      "args": ["-y", "nlobby-mcp"],
+      "args": ["-y", "nlobby-cli", "serve"],
       "env": {
         "NLOBBY_BASE_URL": "https://nlobby.nnn.ed.jp"
       }
@@ -125,286 +180,179 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 For any MCP-compatible client, use:
 
-- **Command**: `nlobby-mcp` (if installed globally) or `node /path/to/nlobby-mcp/dist/index.js`
+- **Command**: `nlobby serve` (if installed globally) or `node /path/to/dist/index.js serve`
 - **Protocol**: stdio
-- **Environment**: Optional environment variables as listed in Configuration section
+- **Environment**: Optional environment variables as listed in the Configuration section
 
 </details>
 
 ### MCP Resources
 
-The server provides the following resources:
-
-- `nlobby://news` - School news and notices
-- `nlobby://schedule` - Daily class schedule and events
-- `nlobby://required-courses` - Required courses and academic information
-- `nlobby://user-profile` - Current user information
+| URI                         | Description                               |
+| --------------------------- | ----------------------------------------- |
+| `nlobby://news`             | School news and notices                   |
+| `nlobby://schedule`         | Daily class schedule and events           |
+| `nlobby://required-courses` | Required courses and academic information |
+| `nlobby://user-profile`     | Current user information                  |
 
 ### MCP Tools
 
-Available tools:
+#### Authentication
 
-#### Authentication Tools
+| Tool                    | Description                                     |
+| ----------------------- | ----------------------------------------------- |
+| `interactive_login`     | Open browser for manual login (recommended)     |
+| `login_help`            | Personalized login help and troubleshooting     |
+| `set_cookies`           | Manually set authentication cookies             |
+| `check_cookies`         | Check authentication cookie status              |
+| `verify_authentication` | Verify authentication status across all clients |
 
-- `interactive_login` - Open browser for manual login to N Lobby (recommended)
-- `login_help` - Get personalized login help and troubleshooting
-- `set_cookies` - Manually set authentication cookies
-- `check_cookies` - Check authentication cookie status
-- `verify_authentication` - Verify authentication status across all clients
+#### News
 
-#### Data Retrieval Tools
+| Tool                   | Key Parameters               | Description                           |
+| ---------------------- | ---------------------------- | ------------------------------------- |
+| `get_news`             | `category?` `limit?` `sort?` | Retrieve school news with filtering   |
+| `get_news_detail`      | `newsId` `markAsRead?`       | Full detail for a specific article    |
+| `mark_news_as_read`    | `ids` (array)                | Mark articles as read                 |
+| `get_unread_news_info` |                              | Unread count and important-news flags |
 
-- `get_news` - Retrieve school news with filtering and sorting options
-- `get_news_detail` - Retrieve detailed information for a specific news article
-- `get_required_courses` - Retrieve required courses information with filtering options
-- `get_schedule` - Get schedule for a specific date (backward compatibility)
-- `get_calendar_events` - Get calendar events with advanced options (personal/school)
-- `test_calendar_endpoints` - Test both personal and school calendar endpoints
-- `mark_news_as_read` - Mark news articles as read (supports multiple IDs)
+#### Schedule & Calendar
 
-#### Debugging Tools
+| Tool                      | Key Parameters                                     | Description                       |
+| ------------------------- | -------------------------------------------------- | --------------------------------- |
+| `get_schedule`            | `date?`                                            | Schedule for a date (YYYY-MM-DD)  |
+| `get_calendar_events`     | `calendar_type?` `from_date?` `to_date?` `period?` | Calendar events (personal/school) |
+| `test_calendar_endpoints` | `from_date?` `to_date?`                            | Test both calendar endpoints      |
+| `get_calendar_filters`    |                                                    | Lobby calendar filter definitions |
 
-- `health_check` - Test N Lobby API connection
-- `debug_connection` - Debug N Lobby connection with detailed information
-- `test_page_content` - Test page content retrieval and show sample content
-- `test_trpc_endpoint` - Test specific tRPC endpoint with detailed response
+#### Courses & Exams
 
-### MCP Prompts
+| Tool                   | Key Parameters                   | Description                             |
+| ---------------------- | -------------------------------- | --------------------------------------- |
+| `get_required_courses` | `grade?` `semester?` `category?` | Required courses with progress tracking |
+| `check_exam_day`       | `date?`                          | Check if a date is an exam day          |
+| `finish_exam_day_mode` |                                  | End exam day mode                       |
+| `get_exam_otp`         |                                  | Get one-time password for exam          |
 
-This server does not provide any pre-configured prompts.
+#### Account & Navigation
+
+| Tool                          | Description                                  |
+| ----------------------------- | -------------------------------------------- |
+| `get_account_info`            | Extract account info from Next.js page       |
+| `get_student_card_screenshot` | Capture student ID card screenshot           |
+| `update_last_access`          | Update last access timestamp                 |
+| `get_navigation_menus`        | Main navigation menu list                    |
+| `get_notifications`           | Notification messages                        |
+| `get_user_interests`          | User interest tags (with optional icon data) |
+| `get_interest_weights`        | Interest weight scale definitions            |
+
+#### Debugging
+
+| Tool                 | Key Parameters        | Description                    |
+| -------------------- | --------------------- | ------------------------------ |
+| `health_check`       |                       | Test N Lobby API connection    |
+| `debug_connection`   | `endpoint?`           | Detailed connection debugging  |
+| `test_page_content`  | `endpoint?` `length?` | Page content retrieval testing |
+| `test_trpc_endpoint` | `method` `params?`    | Test a specific tRPC endpoint  |
+
+---
 
 ## Authentication Flow
 
 ### Method 1: Interactive Browser Login (Recommended)
 
-1. Use the `interactive_login` tool (no credentials required)
-2. A browser window will open to N Lobby
-3. Complete the login process manually in the browser
-4. The system will detect when you're logged in and extract cookies automatically
-5. Access real N Lobby data immediately
+**CLI:**
+
+```bash
+nlobby login
+```
+
+**MCP tool:** `interactive_login`
+
+A browser window opens automatically. Complete the N Lobby login, and cookies are extracted and saved.
 
 ### Method 2: Manual Cookie Setup
 
-1. Login to N Lobby via web browser
-2. Extract cookies from browser developer tools:
-   - Open Developer Tools (F12)
-   - Go to Application/Storage tab
-   - Copy all cookies as a string
-3. Use `set_cookies` tool with the complete cookie string
-4. Use `health_check` tool to verify connection
-5. Access real N Lobby data via other tools
+1. Log in to N Lobby in your web browser
+2. Open DevTools → Application / Storage → Cookies
+3. Copy all cookies as a string
 
-## Quick Start Examples
-
-### For Students
+**CLI:**
 
 ```bash
-# Get help for your student account
-login_help email="your.name@nnn.ed.jp"
-
-# Use interactive login (recommended)
-interactive_login
-
-# Get today's news
-get_news
-
-# Get detailed information for a specific news article
-get_news_detail newsId="980"
-
-# Get news detail and mark as read
-get_news_detail newsId="980" markAsRead=true
-
-# Get personal calendar events for today
-get_calendar_events calendar_type="personal" period="today"
-
-# Get school calendar events for this week
-get_calendar_events calendar_type="school" period="week"
-
-# Get required courses information
-get_required_courses
-
-# Get required courses for a specific grade
-get_required_courses grade=2
-
-# Mark a news article as read (single ID)
-mark_news_as_read ids=["980"]
+nlobby cookies set "__Secure-next-auth.session-token=ey...;"
 ```
 
-### For Staff
+**MCP tool:** `set_cookies cookies="__Secure-next-auth.session-token=ey...;"`
 
-```bash
-# Get help for your staff account
-login_help email="your.name@nnn.ac.jp"
-
-# Use interactive login
-interactive_login
-
-# Test both calendar endpoints
-test_calendar_endpoints
-```
-
-### For Parents
-
-```bash
-# Get help for your parent account
-login_help email="parent@gmail.com"
-
-# Use interactive login
-interactive_login
-
-# Check your child's news
-get_news
-
-# Get your child's schedule
-get_calendar_events calendar_type="personal" period="today"
-```
-
-### Troubleshooting
-
-```bash
-# Get general help
-login_help
-
-# Check connection status
-health_check
-
-# Check cookie status
-check_cookies
-
-# Verify authentication across all systems
-verify_authentication
-
-# Debug connection with detailed info
-debug_connection
-
-# Test page content retrieval
-test_page_content endpoint="/news"
-```
-
-### Required Courses
-
-The `get_required_courses` tool allows you to retrieve academic course information:
-
-```bash
-# Get all required courses
-get_required_courses
-
-# Filter by grade level
-get_required_courses grade=1
-get_required_courses grade=2
-
-# Combine multiple filters
-get_required_courses grade=2 semester="2024"
-```
-
-The response includes comprehensive course information:
-
-- **Course Details**: Subject code/name, curriculum code/name
-- **Academic Credits**: Academic credit hours and approved credits
-- **Progress Tracking**: Report completion percentage, average scores
-- **Status Information**: Acquisition status, evaluation grades
-- **Test Information**: Exam status, periodic exam results, makeup exam URLs
-- **Schooling Data**: Attendance counts and requirements
-- **Time Information**: Term year, grade level (1年次, 2年次, 3年次)
-- **Computed Fields**: Progress percentage, completion status, average scores
-
-### Calendar Events
-
-The `get_calendar_events` tool supports advanced options:
-
-```bash
-# Get personal calendar for today
-get_calendar_events calendar_type="personal" period="today"
-
-# Get school calendar for this week
-get_calendar_events calendar_type="school" period="week"
-
-# Get events for a specific date range
-get_calendar_events calendar_type="personal" from_date="2024-01-15" to_date="2024-01-20"
-
-# Get events for a single day
-get_calendar_events calendar_type="personal" from_date="2024-01-15"
-```
-
-### Cookie Format
-
-When using `set_cookies`, provide the complete cookie string from browser:
-
-```
-__Secure-next-auth.session-token=ey...; __Host-next-auth.csrf-token=abc123...; other-cookies=values;
-```
+---
 
 ## User Types
 
 The server supports three user types based on email domain:
 
-- **Students**: `@nnn.ed.jp`
-- **Staff**: `@nnn.ac.jp`
-- **Parents**: Any other registered email addresses (Gmail, Yahoo, company emails, etc.)
+| Type         | Email Domain               |
+| ------------ | -------------------------- |
+| **Students** | `@nnn.ed.jp`               |
+| **Staff**    | `@nnn.ac.jp`               |
+| **Parents**  | Any other registered email |
+
+---
+
+## Project Structure
+
+```
+src/
+├── index.ts              # Entry point — CLI vs MCP mode detection
+├── config.ts             # Configuration management
+├── logger.ts             # Logging utilities
+├── trpc-client.ts        # tRPC client for API calls
+├── types.ts              # TypeScript type definitions
+├── api/
+│   ├── index.ts          # NLobbyApi facade + session persistence
+│   ├── context.ts        # ApiContext interface
+│   ├── shared.ts         # Shared utilities (fetchRenderedHtml, …)
+│   ├── news.ts           # News functions
+│   ├── schedule.ts       # Schedule / calendar functions
+│   ├── courses.ts        # Course / exam functions
+│   ├── account.ts        # Account info / student card functions
+│   ├── navigation.ts     # Navigation / notification / interest functions
+│   └── health.ts         # Health check / debug functions
+├── auth/
+│   ├── browser.ts        # Puppeteer browser authentication
+│   ├── nextauth.ts       # NextAuth.js session handling
+│   └── credentials.ts    # Credential validation and guidance
+├── cli/
+│   ├── index.ts          # Commander program wiring
+│   ├── commands/         # login, news, schedule, courses, profile, health, serve
+│   └── formatters/       # Human-readable output formatters
+└── mcp/
+    └── server.ts         # MCP server (28 tools, 4 resources)
+```
+
+---
 
 ## Development
 
 ### Scripts
 
-- `pnpm run build` - Build the TypeScript project
-- `pnpm run dev` - Watch mode for development
-- `pnpm run start` - Start the MCP server
-- `pnpm run test` - Run tests
-- `pnpm run lint` - Lint the code
-- `pnpm run format` - Format the code
-
-### Project Structure
-
-```
-src/
-├── index.ts              # Entry point
-├── server.ts             # MCP server implementation
-├── api.ts                # N Lobby API integration
-├── browser-auth.ts       # Browser automation for login
-├── credential-manager.ts # User credential validation and management
-├── nextauth.ts           # NextAuth.js session handling
-├── trpc-client.ts        # tRPC client for API calls
-├── config.ts             # Configuration management
-├── logger.ts             # Logging utilities
-└── types.ts              # TypeScript type definitions
+```bash
+pnpm run build   # Build (esbuild bundle + tsc type declarations)
+pnpm run dev     # Watch mode
+pnpm run start   # Start MCP server
+pnpm run lint    # Lint
+pnpm run format  # Format
 ```
 
-### Architecture
+### Security Notes
 
-The server uses multiple layers for authentication and API access:
-
-1. **Browser Authentication**: Automated browser for interactive login
-2. **Cookie Management**: Handles NextAuth.js session cookies
-3. **HTTP Client**: Axios-based client for REST API calls
-4. **tRPC Client**: Type-safe client for tRPC endpoints
-5. **Credential Manager**: Validates user types and provides guidance
-
-## Security Notes
-
-- All authentication tokens are stored in memory only
-- The server uses secure cookie-based authentication
-- Access is restricted to authorized N High School Group email domains
-- No sensitive data is logged or persisted
+- CLI cookies are stored in `~/.nlobby/session` (plain text — protect accordingly)
+- MCP mode keeps all authentication tokens in memory only
 - Browser automation is used only for authentication, not data scraping
+- No sensitive data is logged
 
-## Troubleshooting
-
-### Common Issues
-
-1. **Authentication Failed**: Use `interactive_login` for the most reliable authentication
-2. **Cookie Sync Issues**: Run `verify_authentication` to check synchronization
-3. **Connection Problems**: Use `health_check` and `debug_connection` for diagnosis
-4. **Empty Results**: Ensure you're authenticated and have proper permissions
-
-### Debug Tools
-
-The server includes comprehensive debugging tools:
-
-- `debug_connection` - Network and authentication debugging
-- `test_page_content` - Content retrieval testing
-- `test_trpc_endpoint` - API endpoint testing
-- `verify_authentication` - Authentication status verification
+---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

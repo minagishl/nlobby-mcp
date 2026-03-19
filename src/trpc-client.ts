@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 import { CONFIG } from "./config.js";
-import { NextAuthHandler } from "./nextauth.js";
+import { NextAuthHandler } from "./auth/nextauth.js";
 import { logger } from "./logger.js";
 import { AxiosError, NetworkError } from "./types.js";
 

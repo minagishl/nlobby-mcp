@@ -10,12 +10,12 @@ import {
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { NLobbyApi } from "./api.js";
-import { CONFIG } from "./config.js";
-import { BrowserAuth } from "./browser-auth.js";
-import { CredentialManager } from "./credential-manager.js";
-import { CalendarType, Course } from "./types.js";
-import { logger } from "./logger.js";
+import { NLobbyApi } from "../api/index.js";
+import { CONFIG } from "../config.js";
+import { BrowserAuth } from "../auth/browser.js";
+import { CredentialManager } from "../auth/credentials.js";
+import { CalendarType, Course } from "../types.js";
+import { logger } from "../logger.js";
 
 export class NLobbyMCPServer {
   private server: Server;
@@ -60,7 +60,6 @@ export class NLobbyMCPServer {
             description: "Daily class schedule and events",
             mimeType: "application/json",
           },
-
           {
             uri: "nlobby://user-profile",
             name: "User Profile",
@@ -98,7 +97,9 @@ export class NLobbyMCPServer {
             }
 
             case "nlobby://schedule": {
-              const schedule = await this.api.getSchedule();
+              const schedule = await this.api.getSchedule(
+                CalendarType.PERSONAL,
+              );
               return {
                 contents: [
                   {
@@ -309,7 +310,6 @@ export class NLobbyMCPServer {
               },
             },
           },
-
           {
             name: "set_cookies",
             description: "Set authentication cookies for N Lobby access",
@@ -341,7 +341,6 @@ export class NLobbyMCPServer {
               properties: {},
             },
           },
-
           {
             name: "debug_connection",
             description: "Debug N Lobby connection with detailed information",
@@ -356,7 +355,6 @@ export class NLobbyMCPServer {
               },
             },
           },
-
           {
             name: "test_page_content",
             description: "Test page content retrieval and show sample content",
@@ -376,7 +374,6 @@ export class NLobbyMCPServer {
               },
             },
           },
-
           {
             name: "test_trpc_endpoint",
             description: "Test specific tRPC endpoint with detailed response",
@@ -405,7 +402,6 @@ export class NLobbyMCPServer {
               properties: {},
             },
           },
-
           {
             name: "interactive_login",
             description:
@@ -568,7 +564,6 @@ export class NLobbyMCPServer {
                 ? news.filter((n) => n.category === category)
                 : news;
 
-              // Sort the news
               switch (sort) {
                 case "oldest":
                   filteredNews.sort(
@@ -653,7 +648,7 @@ export class NLobbyMCPServer {
                 content: [
                   {
                     type: "text",
-                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}\n\nTo authenticate:\n1. Login to N Lobby in your browser\n2. Open Developer Tools (F12)\n3. Go to Application/Storage tab\n4. Copy cookies and use the set_cookies tool\n5. Use health_check to verify connection`,
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
                   },
                 ],
               };
@@ -662,7 +657,6 @@ export class NLobbyMCPServer {
           case "get_account_info":
             try {
               const accountInfo = await this.api.getAccountInfoFromScript();
-
               return {
                 content: [
                   {
@@ -676,7 +670,7 @@ export class NLobbyMCPServer {
                 content: [
                   {
                     type: "text",
-                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}\n\nEnsure valid authentication cookies are set with the set_cookies tool.`,
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
                   },
                 ],
               };
@@ -685,7 +679,6 @@ export class NLobbyMCPServer {
           case "get_student_card_screenshot":
             try {
               const result = await this.api.getStudentCardScreenshot();
-
               return {
                 content: [
                   {
@@ -717,7 +710,7 @@ export class NLobbyMCPServer {
                 content: [
                   {
                     type: "text",
-                    text: `Error capturing student card screenshot: ${error instanceof Error ? error.message : "Unknown error"}\n\nPlease verify authentication (set_cookies or interactive_login) and ensure the student portal is accessible.`,
+                    text: `Error capturing student card screenshot: ${error instanceof Error ? error.message : "Unknown error"}`,
                   },
                 ],
               };
@@ -733,11 +726,9 @@ export class NLobbyMCPServer {
 
               const courses = await this.api.getRequiredCourses();
 
-              // Apply filters if provided
               let filteredCourses = courses;
 
               if (grade !== undefined) {
-                // Filter by grade (year) - convert grade number to grade string
                 const gradeString =
                   grade === 1
                     ? "1年次"
@@ -752,8 +743,6 @@ export class NLobbyMCPServer {
               }
 
               if (semester) {
-                // Filter by semester/term - this data isn't directly available in the current structure
-                // Could filter by term year or other available fields
                 filteredCourses = filteredCourses.filter(
                   (course) =>
                     course.termYear &&
@@ -762,7 +751,6 @@ export class NLobbyMCPServer {
               }
 
               if (category) {
-                // Filter by curriculum name (subject category)
                 filteredCourses = filteredCourses.filter(
                   (course) =>
                     course.curriculumName &&
@@ -772,7 +760,6 @@ export class NLobbyMCPServer {
                 );
               }
 
-              // Create a summary with useful information
               const summary = {
                 totalCourses: filteredCourses.length,
                 filters: { grade, semester, category },
@@ -801,7 +788,7 @@ export class NLobbyMCPServer {
                 content: [
                   {
                     type: "text",
-                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}\n\nTo authenticate:\n1. Login to N Lobby in your browser\n2. Open Developer Tools (F12)\n3. Go to Application/Storage tab\n4. Copy cookies and use the set_cookies tool\n5. Use health_check to verify connection`,
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
                   },
                 ],
               };
@@ -824,7 +811,7 @@ export class NLobbyMCPServer {
                 content: [
                   {
                     type: "text",
-                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}\n\nTo authenticate:\n1. Login to N Lobby in your browser\n2. Open Developer Tools (F12)\n3. Go to Application/Storage tab\n4. Copy cookies and use the set_cookies tool\n5. Use health_check to verify connection`,
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
                   },
                 ],
               };
@@ -839,13 +826,11 @@ export class NLobbyMCPServer {
                 period?: string;
               };
 
-              // Determine calendar type
               const calendarType =
                 calendar_type === "school"
                   ? CalendarType.SCHOOL
                   : CalendarType.PERSONAL;
 
-              // Determine date range
               let dateRange;
               if (period) {
                 switch (period) {
@@ -866,10 +851,8 @@ export class NLobbyMCPServer {
               } else if (from_date && to_date) {
                 dateRange = this.api.createDateRange(from_date, to_date);
               } else if (from_date) {
-                // Single day range
                 dateRange = this.api.createSingleDayRange(from_date);
               }
-              // If no date parameters, use default (current week)
 
               const schedule = await this.api.getSchedule(
                 calendarType,
@@ -893,7 +876,7 @@ export class NLobbyMCPServer {
                 content: [
                   {
                     type: "text",
-                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}\n\nTo authenticate:\n1. Login to N Lobby in your browser\n2. Open Developer Tools (F12)\n3. Go to Application/Storage tab\n4. Copy cookies and use the set_cookies tool\n5. Use health_check to verify connection`,
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
                   },
                 ],
               };
@@ -906,12 +889,10 @@ export class NLobbyMCPServer {
                 to_date?: string;
               };
 
-              // Create date range if provided
               let dateRange;
               if (from_date && to_date) {
                 dateRange = this.api.createDateRange(from_date, to_date);
               } else if (from_date) {
-                // Single day range
                 dateRange = this.api.createSingleDayRange(from_date);
               }
 
@@ -970,7 +951,7 @@ export class NLobbyMCPServer {
                     type: "text",
                     text: `Error testing calendar endpoints: ${
                       error instanceof Error ? error.message : "Unknown error"
-                    }\n\nTo authenticate:\n1. Login to N Lobby in your browser\n2. Open Developer Tools (F12)\n3. Go to Application/Storage tab\n4. Copy cookies and use the set_cookies tool\n5. Use health_check to verify connection`,
+                    }`,
                   },
                 ],
               };
@@ -1041,7 +1022,7 @@ export class NLobbyMCPServer {
               content: [
                 {
                   type: "text",
-                  text: `Sample content from ${testEndpoint || "/news"}:\n\n${sampleContent}\n\nThis content was retrieved after successful authentication.`,
+                  text: `Sample content from ${testEndpoint || "/news"}:\n\n${sampleContent}`,
                 },
               ],
             };
@@ -1092,17 +1073,10 @@ export class NLobbyMCPServer {
 
           case "interactive_login":
             try {
-              // Initialize browser
               await this.browserAuth.initializeBrowser();
-
-              // Start interactive login
               const extractedCookies =
                 await this.browserAuth.interactiveLogin();
-
-              // Set cookies in API client
               this.api.setCookies(extractedCookies.allCookies);
-
-              // Close browser
               await this.browserAuth.close();
 
               return {
@@ -1114,14 +1088,12 @@ export class NLobbyMCPServer {
                 ],
               };
             } catch (error) {
-              // Ensure browser is closed on error
               await this.browserAuth.close();
-
               return {
                 content: [
                   {
                     type: "text",
-                    text: `[ERROR] Interactive login failed: ${error instanceof Error ? error.message : "Unknown error"}\n\nPlease try again or contact support if the issue persists.`,
+                    text: `[ERROR] Interactive login failed: ${error instanceof Error ? error.message : "Unknown error"}`,
                   },
                 ],
               };
@@ -1152,7 +1124,6 @@ export class NLobbyMCPServer {
 
             helpMessage += `\n\n${this.credentialManager.getTroubleshootingTips()}`;
 
-            // Add session stats
             const stats = this.credentialManager.getSessionStats();
             helpMessage += `\n\n[STATUS] Session Stats:\n- Active sessions: ${stats.total - stats.expired}\n- Expired sessions: ${stats.expired}`;
 
@@ -1175,13 +1146,12 @@ export class NLobbyMCPServer {
                   content: [
                     {
                       type: "text",
-                      text: "Error: No news article IDs provided. Please specify 'ids' parameter with at least one ID.",
+                      text: "Error: No news article IDs provided.",
                     },
                   ],
                 };
               }
 
-              // Process each ID sequentially
               const results = [];
               const errors = [];
 
@@ -1198,7 +1168,6 @@ export class NLobbyMCPServer {
                 }
               }
 
-              // Prepare response message
               let responseText = "";
 
               if (results.length > 0) {
@@ -1504,7 +1473,6 @@ export class NLobbyMCPServer {
     const authStatus = this.api.getCookieStatus();
     const recommendations = [];
 
-    // Check if no authentication is present
     if (
       authStatus.includes("[ERROR] no cookies") &&
       authStatus.includes("[ERROR] not authenticated")
@@ -1518,21 +1486,12 @@ export class NLobbyMCPServer {
       recommendations.push(
         '3. Wait for the "Login successful" message before proceeding',
       );
-    }
-
-    // Check if authentication is partial
-    else if (authStatus.includes("[ERROR] not synchronized")) {
+    } else if (authStatus.includes("[ERROR] not synchronized")) {
       recommendations.push("1. Cookie synchronization issue detected");
       recommendations.push(
         "2. Try running interactive_login again to refresh all cookies",
       );
-      recommendations.push(
-        "3. Check if any network issues are preventing proper cookie setting",
-      );
-    }
-
-    // Check if authentication is complete but endpoints are failing
-    else if (
+    } else if (
       authStatus.includes("[SUCCESS] authenticated") &&
       authStatus.includes("[SUCCESS] synchronized")
     ) {
@@ -1543,18 +1502,13 @@ export class NLobbyMCPServer {
       recommendations.push(
         "3. Try running health_check to verify connectivity",
       );
-      recommendations.push("4. Check if N Lobby server is experiencing issues");
-    }
-
-    // Default recommendations
-    else {
+    } else {
       recommendations.push(
         "1. Check the authentication status above for specific issues",
       );
       recommendations.push(
         "2. Run health_check to verify overall system health",
       );
-      recommendations.push("3. Try get_news to test data retrieval");
     }
 
     return recommendations.join("\n");

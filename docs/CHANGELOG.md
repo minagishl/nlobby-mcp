@@ -8,6 +8,15 @@
 
 ### Added
 
+- **CLI mode** — the package is now a dual-mode tool. Running `nlobby <command>` gives a full interactive CLI; running `nlobby serve` (or `nlobby mcp`) starts the MCP server as before. The binary is available as both `nlobby` and `nlobby-mcp`.
+- CLI commands: `login`, `cookies set|check`, `news [list|show|read]`, `schedule`, `calendar`, `courses`, `profile`, `health`, `serve`.
+  - All data commands accept `--json` for raw JSON output.
+  - `news` supports `--limit`, `--category`, `--sort`, and `--unread` filters.
+  - `calendar` supports `--from`, `--to`, and `--type personal|school`.
+  - `courses` supports `--grade` and `--semester` filters.
+- Session persistence for CLI — cookies are automatically saved to `~/.nlobby/session` after login and restored on each invocation.
+- `nlobby login` opens a headed Puppeteer browser for interactive N Lobby authentication.
+- `SKILLS.md` — reference table of all CLI commands, MCP tools, and MCP resources shipped with the package.
 - `check_exam_day` tool — checks whether a given date (or today) is an exam day via `exam.isExamDay`.
 - `finish_exam_day_mode` tool — ends exam day mode via `exam.finishExamDayMode`.
 - `get_exam_otp` tool — retrieves the exam one-time password via `auth.student.examOneTimePasswordDisplay`.
@@ -19,6 +28,16 @@
 - `get_interest_weights` tool — returns the interest weight scale definitions via `interest.readWeights`.
 - `get_calendar_filters` tool — retrieves lobby calendar filter definitions via `calendar.getLobbyCalendarFilters`.
 - Corresponding type definitions (`ExamOneTimePassword`, `NavigationMenuCategory`, `UnreadNewsInfo`, `NotificationMessage`, `UserInterest`, `InterestWeight`, `LobbyCalendarFilter`) added to `types.ts`.
+
+### Changed
+
+- Package renamed from `nlobby-mcp` to `nlobby-cli` to reflect the broader scope.
+- `src/api.ts` (3981 lines) split into focused modules: `api/news.ts`, `api/schedule.ts`, `api/courses.ts`, `api/account.ts`, `api/navigation.ts`, `api/health.ts`, `api/shared.ts`, and `api/index.ts` (facade).
+- Auth helpers moved to `src/auth/` (`browser.ts`, `nextauth.ts`, `credentials.ts`).
+- MCP server moved to `src/mcp/server.ts`.
+- `src/logger.ts` gains `forceProductionMode()` to suppress non-error output when running as MCP stdio transport.
+- Mode detection in `src/index.ts`: explicit `serve`/`mcp` argument or piped stdin → MCP mode; otherwise CLI mode.
+- `commander` added as a production dependency.
 
 [`1.3.0...1.4.0`](https://github.com/minagishl/nlobby-mcp/compare/v1.3.0...v1.4.0)
 

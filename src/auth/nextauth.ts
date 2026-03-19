@@ -1,4 +1,4 @@
-import { logger } from "./logger.js";
+import { logger } from "../logger.js";
 
 export interface NextAuthCookies {
   sessionToken?: string;
@@ -18,7 +18,6 @@ export class NextAuthHandler {
     for (const pair of cookiePairs) {
       const [name, value] = pair.trim().split("=");
       if (name && value) {
-        // Handle NextAuth.js cookie names
         if (name === "__Secure-next-auth.session-token") {
           cookies.sessionToken = decodeURIComponent(value);
         } else if (name === "__Host-next-auth.csrf-token") {
@@ -77,19 +76,14 @@ export class NextAuthHandler {
     return this.cookies.sessionToken || null;
   }
 
-  // Decode NextAuth.js session token (if needed)
   async decodeSessionToken(): Promise<{ token: string } | null> {
     if (!this.cookies.sessionToken) {
       return null;
     }
 
     try {
-      // NextAuth.js uses JWE (JSON Web Encryption) for session tokens
-      // For now, we'll just return the raw token
-      // In a full implementation, you'd need to decrypt it with the secret
       return {
         token: this.cookies.sessionToken,
-        // Add other session data as needed
       };
     } catch (error) {
       logger.error("Error decoding session token:", error);

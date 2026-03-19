@@ -1,6 +1,6 @@
 import puppeteer, { Browser, Page } from "puppeteer";
-import { CONFIG } from "./config.js";
-import { logger } from "./logger.js";
+import { CONFIG } from "../config.js";
+import { logger } from "../logger.js";
 
 export interface ExtractedCookies {
   sessionToken?: string;
@@ -17,7 +17,6 @@ export class BrowserAuth {
     try {
       logger.info("Initializing browser for authentication...");
 
-      // Check if browser is already running and clean up
       if (this.browser) {
         try {
           await this.browser.close();
@@ -29,15 +28,13 @@ export class BrowserAuth {
       }
 
       this.browser = await puppeteer.launch({
-        headless: false, // Show browser for user interaction if needed
+        headless: false,
         defaultViewport: {
           width: 1280,
           height: 800,
         },
-        // Chrome stability improvements
         ignoreDefaultArgs: ["--disable-extensions", "--disable-default-apps"],
         args: [
-          // Essential stability args
           "--no-sandbox",
           "--disable-setuid-sandbox",
           "--disable-dev-shm-usage",
@@ -47,18 +44,12 @@ export class BrowserAuth {
           "--no-pings",
           "--password-store=basic",
           "--use-mock-keychain",
-
-          // Memory management
           "--memory-pressure-off",
           "--max_old_space_size=4096",
           '--js-flags="--max-old-space-size=4096"',
-
-          // Process management (remove single-process which can cause crashes)
           "--disable-background-timer-throttling",
           "--disable-renderer-backgrounding",
           "--disable-backgrounding-occluded-windows",
-
-          // Security and privacy (minimal set)
           "--disable-background-mode",
           "--disable-default-apps",
           "--disable-sync",
@@ -66,20 +57,14 @@ export class BrowserAuth {
           "--disable-infobars",
           "--disable-notifications",
           "--disable-popup-blocking",
-
-          // Performance optimizations
           "--enable-async-dns",
           "--enable-simple-cache-backend",
           "--enable-tcp-fast-open",
           "--prerender-from-omnibox=disabled",
-
-          // OAuth compatibility
           "--disable-features=VizDisplayCompositor,TranslateUI",
           "--disable-search-engine-choice-screen",
           "--disable-component-update",
           "--allow-running-insecure-content",
-
-          // Crash prevention
           "--disable-hang-monitor",
           "--disable-prompt-on-repost",
           "--disable-client-side-phishing-detection",
@@ -96,24 +81,20 @@ export class BrowserAuth {
           "--disable-new-avatar-menu",
           "--disable-new-bookmark-apps",
         ],
-        // Additional stability options
         timeout: 60000,
         protocolTimeout: 60000,
-        slowMo: 250, // Add slight delay to prevent overwhelming the browser
+        slowMo: 250,
       });
 
       this.page = await this.browser.newPage();
 
-      // Set user agent to match typical browser
       await this.page.setUserAgent(
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
       );
 
-      // Configure page to handle navigation robustly
       await this.page.setDefaultNavigationTimeout(60000);
       await this.page.setDefaultTimeout(30000);
 
-      // Handle page errors gracefully
       this.page.on("error", (error) => {
         logger.error("Page error:", error);
       });
@@ -128,12 +109,10 @@ export class BrowserAuth {
         }
       });
 
-      // Handle frame detached events
       this.page.on("framedetached", (frame) => {
         logger.warn("Frame detached:", frame.url());
       });
 
-      // Handle browser disconnect and crashes
       this.browser.on("disconnected", () => {
         logger.error("Browser disconnected unexpectedly");
         this.browser = null;
@@ -148,18 +127,14 @@ export class BrowserAuth {
         logger.info("Browser target destroyed:", target.url());
       });
 
-      // Set resource limits to prevent memory issues
       await this.page.setJavaScriptEnabled(true);
       await this.page.setCacheEnabled(false);
 
-      // Set request interception to block unnecessary resources
       await this.page.setRequestInterception(true);
       this.page.on("request", (request) => {
         const resourceType = request.resourceType();
 
-        // Block heavy resources that might cause crashes
         if (["image", "media", "font", "stylesheet"].includes(resourceType)) {
-          // Allow some images for login captcha/2FA
           if (
             resourceType === "image" &&
             (request.url().includes("accounts.google.com") ||
@@ -179,7 +154,6 @@ export class BrowserAuth {
     } catch (error) {
       logger.error("Failed to initialize browser:", error);
 
-      // Clean up if initialization failed
       if (this.browser) {
         try {
           await this.browser.close();
@@ -197,16 +171,13 @@ export class BrowserAuth {
   private async setupPageConfiguration(): Promise<void> {
     if (!this.page) throw new Error("Page not initialized");
 
-    // Set user agent to match typical browser
     await this.page.setUserAgent(
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
     );
 
-    // Configure page to handle navigation robustly
     await this.page.setDefaultNavigationTimeout(60000);
     await this.page.setDefaultTimeout(30000);
 
-    // Handle page errors gracefully
     this.page.on("error", (error) => {
       logger.error("Page error:", error);
     });
@@ -221,18 +192,14 @@ export class BrowserAuth {
       }
     });
 
-    // Set resource limits to prevent memory issues
     await this.page.setJavaScriptEnabled(true);
     await this.page.setCacheEnabled(false);
 
-    // Set request interception to block unnecessary resources
     await this.page.setRequestInterception(true);
     this.page.on("request", (request) => {
       const resourceType = request.resourceType();
 
-      // Block heavy resources that might cause crashes
       if (["image", "media", "font", "stylesheet"].includes(resourceType)) {
-        // Allow some images for login captcha/2FA
         if (
           resourceType === "image" &&
           (request.url().includes("accounts.google.com") ||
@@ -261,7 +228,6 @@ export class BrowserAuth {
         return false;
       }
 
-      // Try to evaluate a simple expression
       await this.page.evaluate(() => document.readyState);
       return true;
     } catch (error) {
@@ -288,7 +254,6 @@ export class BrowserAuth {
         const cookieString = `${cookie.name}=${cookie.value}`;
         cookieStrings.push(cookieString);
 
-        // Extract specific NextAuth.js cookies
         if (cookie.name === "__Secure-next-auth.session-token") {
           sessionToken = cookie.value;
         } else if (cookie.name === "__Host-next-auth.csrf-token") {
@@ -352,7 +317,6 @@ export class BrowserAuth {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        // Check if browser crashed
         if (!this.browser || !this.browser.isConnected()) {
           logger.error("Browser crashed or disconnected, reinitializing...");
           await this.initializeBrowser();
@@ -383,12 +347,10 @@ export class BrowserAuth {
         );
         await new Promise((resolve) => setTimeout(resolve, retryDelay));
 
-        // Check if page is still accessible or if browser crashed
         try {
           if (!this.browser || !this.browser.isConnected()) {
             logger.error("Browser crashed, reinitializing...");
             await this.initializeBrowser();
-            // Navigate back to the expected page
             await this.page!.goto(baseUrl, {
               waitUntil: "networkidle2",
               timeout: 30000,
@@ -415,7 +377,6 @@ export class BrowserAuth {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        // Check if browser crashed
         if (!this.browser || !this.browser.isConnected()) {
           logger.error(
             "Browser crashed during login detection, reinitializing...",
@@ -433,7 +394,6 @@ export class BrowserAuth {
 
         await this.page!.waitForFunction(
           () => {
-            // Check for signs of successful login
             return (
               document.querySelector(
                 '[data-testid="user-menu"], .user-profile, .logout-btn',
@@ -461,7 +421,6 @@ export class BrowserAuth {
         );
         await new Promise((resolve) => setTimeout(resolve, retryDelay));
 
-        // Check if page is still accessible or if browser crashed
         try {
           if (!this.browser || !this.browser.isConnected()) {
             logger.error(
@@ -511,7 +470,6 @@ export class BrowserAuth {
   }
 
   async interactiveLogin(): Promise<ExtractedCookies> {
-    // Check browser health before starting
     const isHealthy = await this.checkBrowserHealth();
     if (!isHealthy) {
       logger.warn("Browser unhealthy, reinitializing...");
@@ -527,7 +485,6 @@ export class BrowserAuth {
     try {
       logger.info("Starting interactive login process...");
 
-      // Navigate to N Lobby
       await this.page.goto(CONFIG.nlobby.baseUrl, {
         waitUntil: "networkidle2",
         timeout: 30000,
@@ -538,19 +495,16 @@ export class BrowserAuth {
       );
       logger.info("The browser will remain open for you to login manually.");
 
-      // Wait for user to complete login (detect when we're on the authenticated page)
       await this.waitForLoginCompletionWithRetry(300000);
 
       logger.info("Login detected! Extracting cookies...");
 
-      // Extract cookies after successful login
       const cookies = await this.extractCookies();
 
       return cookies;
     } catch (error) {
       logger.error("Interactive login failed:", error);
 
-      // Enhanced error logging for interactive login
       if (this.page) {
         try {
           const currentUrl = await this.page.url();
@@ -558,7 +512,6 @@ export class BrowserAuth {
           logger.error(`Current URL: ${currentUrl}`);
           logger.error(`Page title: ${title}`);
 
-          // Take screenshot for debugging
           await this.takeScreenshot("interactive-login-failure-debug.png");
         } catch (debugError) {
           logger.error("Failed to capture debug information:", debugError);

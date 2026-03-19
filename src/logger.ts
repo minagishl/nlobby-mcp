@@ -29,6 +29,10 @@ export class Logger {
     this.logLevel = level;
   }
 
+  forceProductionMode(): void {
+    this.isProduction = true;
+  }
+
   private log(level: LogLevel, message: string, ...args: unknown[]): void {
     if (level < this.logLevel) {
       return;
