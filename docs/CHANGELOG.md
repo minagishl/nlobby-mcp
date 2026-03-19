@@ -4,6 +4,26 @@
 
 ---
 
+## 1.4.0 · 2026-03-19
+
+### Added
+
+- `check_exam_day` tool — checks whether a given date (or today) is an exam day via `exam.isExamDay`.
+- `finish_exam_day_mode` tool — ends exam day mode via `exam.finishExamDayMode`.
+- `get_exam_otp` tool — retrieves the exam one-time password via `auth.student.examOneTimePasswordDisplay`.
+- `update_last_access` tool — updates the current user's last access timestamp via `user.updateLastAccess`.
+- `get_navigation_menus` tool — fetches the main navigation menu list via `menu.findMainNavigations`.
+- `get_unread_news_info` tool — returns unread news counts and important-news flags via `news.getUnreadNewsInfo`.
+- `get_notifications` tool — retrieves notification messages via `notification.getMessages`.
+- `get_user_interests` tool — fetches the user's interest tags (with optional icon data) via `interest.readInterests` / `interest.readInterestsWithIcon`.
+- `get_interest_weights` tool — returns the interest weight scale definitions via `interest.readWeights`.
+- `get_calendar_filters` tool — retrieves lobby calendar filter definitions via `calendar.getLobbyCalendarFilters`.
+- Corresponding type definitions (`ExamOneTimePassword`, `NavigationMenuCategory`, `UnreadNewsInfo`, `NotificationMessage`, `UserInterest`, `InterestWeight`, `LobbyCalendarFilter`) added to `types.ts`.
+
+[`1.3.0...1.4.0`](https://github.com/minagishl/nlobby-mcp/compare/v1.3.0...v1.4.0)
+
+---
+
 ## 1.3.0 · 2025-11-04
 
 ### Added

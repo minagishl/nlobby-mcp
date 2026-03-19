@@ -446,6 +446,103 @@ export class NLobbyMCPServer {
               required: ["ids"],
             },
           },
+          {
+            name: "check_exam_day",
+            description:
+              "Check if the specified date (or today if omitted) is an exam day",
+            inputSchema: {
+              type: "object",
+              properties: {
+                date: {
+                  type: "string",
+                  description:
+                    "Date in YYYY-MM-DD format (optional, defaults to today)",
+                },
+              },
+            },
+          },
+          {
+            name: "finish_exam_day_mode",
+            description: "Finish exam day mode",
+            inputSchema: {
+              type: "object",
+              properties: {},
+            },
+          },
+          {
+            name: "get_exam_otp",
+            description: "Get one-time password for exam",
+            inputSchema: {
+              type: "object",
+              properties: {},
+            },
+          },
+          {
+            name: "update_last_access",
+            description:
+              "Update the last access timestamp for the current user",
+            inputSchema: {
+              type: "object",
+              properties: {},
+            },
+          },
+          {
+            name: "get_navigation_menus",
+            description: "Get main navigation menu list",
+            inputSchema: {
+              type: "object",
+              properties: {},
+            },
+          },
+          {
+            name: "get_unread_news_info",
+            description:
+              "Get unread news information including count and important news flags",
+            inputSchema: {
+              type: "object",
+              properties: {},
+            },
+          },
+          {
+            name: "get_notifications",
+            description: "Get notification messages",
+            inputSchema: {
+              type: "object",
+              properties: {},
+            },
+          },
+          {
+            name: "get_user_interests",
+            description:
+              "Get user interest tags (optionally with icon information)",
+            inputSchema: {
+              type: "object",
+              properties: {
+                with_icon: {
+                  type: "boolean",
+                  description:
+                    "Whether to include icon information (optional, default: false)",
+                  default: false,
+                },
+              },
+            },
+          },
+          {
+            name: "get_interest_weights",
+            description: "Get interest weight scale definitions",
+            inputSchema: {
+              type: "object",
+              properties: {},
+            },
+          },
+          {
+            name: "get_calendar_filters",
+            description: "Get lobby calendar filter list",
+            inputSchema: {
+              type: "object",
+              properties: {},
+            },
+          },
         ],
       };
     });
@@ -1129,6 +1226,238 @@ export class NLobbyMCPServer {
                   {
                     type: "text",
                     text: `Error marking news as read: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "check_exam_day":
+            try {
+              const { date } = args as { date?: string };
+              const targetDate = date ? new Date(date) : undefined;
+              const result = await this.api.isExamDay(targetDate);
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(
+                      {
+                        date: targetDate
+                          ? targetDate.toISOString().split("T")[0]
+                          : new Date().toISOString().split("T")[0],
+                        isExamDay: result,
+                      },
+                      null,
+                      2,
+                    ),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "finish_exam_day_mode":
+            try {
+              const result = await this.api.finishExamDayMode();
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify({ success: result }, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "get_exam_otp":
+            try {
+              const result = await this.api.getExamOneTimePassword();
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(result, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "update_last_access":
+            try {
+              const result = await this.api.updateLastAccess();
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify({ success: result }, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "get_navigation_menus":
+            try {
+              const menus = await this.api.getMainNavigations();
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(menus, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "get_unread_news_info":
+            try {
+              const info = await this.api.getUnreadNewsInfo();
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(info, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "get_notifications":
+            try {
+              const messages = await this.api.getNotificationMessages();
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(messages, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "get_user_interests":
+            try {
+              const { with_icon = false } = args as { with_icon?: boolean };
+              const interests = await this.api.getUserInterests(with_icon);
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(interests, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "get_interest_weights":
+            try {
+              const weights = await this.api.getInterestWeights();
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(weights, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "get_calendar_filters":
+            try {
+              const filters = await this.api.getLobbyCalendarFilters();
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(filters, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
                   },
                 ],
               };

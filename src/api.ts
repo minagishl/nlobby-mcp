@@ -33,6 +33,13 @@ import {
   ApiResponseData,
   EducationApiResponseData,
   NewsItem,
+  ExamOneTimePassword,
+  NavigationMenuCategory,
+  UnreadNewsInfo,
+  NotificationMessage,
+  UserInterest,
+  InterestWeight,
+  LobbyCalendarFilter,
 } from "./types.js";
 
 // Type definitions for internal use
@@ -3797,5 +3804,178 @@ Please check the API documentation or contact support.`);
       0,
     );
     return Math.round(totalScore / scoresWithValues.length);
+  }
+
+  async isExamDay(date?: Date): Promise<boolean> {
+    logger.info("[INFO] Checking if date is exam day...");
+    const targetDate = date || new Date();
+    const isoString = targetDate.toISOString();
+    try {
+      const result = await this.trpcClient.call<boolean>(
+        "exam.isExamDay",
+        isoString,
+      );
+      logger.info(`[SUCCESS] isExamDay result: ${result}`);
+      return result === true;
+    } catch (error) {
+      logger.error("[ERROR] isExamDay failed:", error);
+      throw error;
+    }
+  }
+
+  async finishExamDayMode(): Promise<boolean> {
+    logger.info("[INFO] Finishing exam day mode...");
+    try {
+      const result = await this.httpClient.post(
+        "/api/trpc/exam.finishExamDayMode",
+        "{}",
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Cookie: this.nextAuth.getCookieHeader(),
+          },
+        },
+      );
+      logger.info("[SUCCESS] finishExamDayMode succeeded");
+      const data = result.data as { result?: { data?: unknown } };
+      return data?.result?.data === true;
+    } catch (error) {
+      logger.error("[ERROR] finishExamDayMode failed:", error);
+      throw error;
+    }
+  }
+
+  async getExamOneTimePassword(): Promise<ExamOneTimePassword> {
+    logger.info("[INFO] Fetching exam one-time password...");
+    try {
+      const result = await this.trpcClient.call<ExamOneTimePassword>(
+        "auth.student.examOneTimePasswordDisplay",
+      );
+      logger.info("[SUCCESS] getExamOneTimePassword succeeded");
+      return result;
+    } catch (error) {
+      logger.error("[ERROR] getExamOneTimePassword failed:", error);
+      throw error;
+    }
+  }
+
+  async updateLastAccess(): Promise<boolean> {
+    logger.info("[INFO] Updating last access...");
+    try {
+      await this.httpClient.post("/api/trpc/user.updateLastAccess", "{}", {
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: this.nextAuth.getCookieHeader(),
+        },
+      });
+      logger.info("[SUCCESS] updateLastAccess succeeded");
+      return true;
+    } catch (error) {
+      logger.error("[ERROR] updateLastAccess failed:", error);
+      throw error;
+    }
+  }
+
+  async getMainNavigations(): Promise<NavigationMenuCategory[]> {
+    logger.info("[INFO] Fetching main navigations...");
+    try {
+      const result = await this.trpcClient.call<{
+        menus?: NavigationMenuCategory[];
+      }>("menu.findMainNavigations", {});
+      logger.info("[SUCCESS] getMainNavigations succeeded");
+      if (result && typeof result === "object" && "menus" in result) {
+        return (result as { menus: NavigationMenuCategory[] }).menus || [];
+      }
+      return Array.isArray(result) ? (result as NavigationMenuCategory[]) : [];
+    } catch (error) {
+      logger.error("[ERROR] getMainNavigations failed:", error);
+      throw error;
+    }
+  }
+
+  async getUnreadNewsInfo(): Promise<UnreadNewsInfo> {
+    logger.info("[INFO] Fetching unread news info...");
+    try {
+      const result = await this.trpcClient.call<UnreadNewsInfo>(
+        "news.getUnreadNewsInfo",
+      );
+      logger.info("[SUCCESS] getUnreadNewsInfo succeeded");
+      return result;
+    } catch (error) {
+      logger.error("[ERROR] getUnreadNewsInfo failed:", error);
+      throw error;
+    }
+  }
+
+  async getNotificationMessages(): Promise<NotificationMessage[]> {
+    logger.info("[INFO] Fetching notification messages...");
+    try {
+      const result = await this.trpcClient.call<NotificationMessage[]>(
+        "notification.getMessages",
+      );
+      logger.info("[SUCCESS] getNotificationMessages succeeded");
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      logger.error("[ERROR] getNotificationMessages failed:", error);
+      throw error;
+    }
+  }
+
+  async getUserInterests(withIcon: boolean = false): Promise<UserInterest[]> {
+    const endpoint = withIcon
+      ? "interest.readInterestsWithIcon"
+      : "interest.readInterests";
+    logger.info(`[INFO] Fetching user interests (${endpoint})...`);
+    try {
+      const result = await this.trpcClient.call<{ interests?: UserInterest[] }>(
+        endpoint,
+      );
+      logger.info("[SUCCESS] getUserInterests succeeded");
+      if (result && typeof result === "object" && "interests" in result) {
+        return (result as { interests: UserInterest[] }).interests || [];
+      }
+      return Array.isArray(result) ? (result as UserInterest[]) : [];
+    } catch (error) {
+      logger.error("[ERROR] getUserInterests failed:", error);
+      throw error;
+    }
+  }
+
+  async getInterestWeights(): Promise<InterestWeight[]> {
+    logger.info("[INFO] Fetching interest weights...");
+    try {
+      const result = await this.trpcClient.call<{
+        weights?: InterestWeight[];
+        success?: boolean;
+      }>("interest.readWeights");
+      logger.info("[SUCCESS] getInterestWeights succeeded");
+      if (result && typeof result === "object" && "weights" in result) {
+        return (result as { weights: InterestWeight[] }).weights || [];
+      }
+      return Array.isArray(result) ? (result as InterestWeight[]) : [];
+    } catch (error) {
+      logger.error("[ERROR] getInterestWeights failed:", error);
+      throw error;
+    }
+  }
+
+  async getLobbyCalendarFilters(): Promise<LobbyCalendarFilter[]> {
+    logger.info("[INFO] Fetching lobby calendar filters...");
+    try {
+      const result = await this.trpcClient.call<{
+        result?: { label?: string; filter?: LobbyCalendarFilter[] };
+      }>("calendar.getLobbyCalendarFilters", {});
+      logger.info("[SUCCESS] getLobbyCalendarFilters succeeded");
+      if (result && typeof result === "object" && "result" in result) {
+        const inner = (
+          result as { result?: { filter?: LobbyCalendarFilter[] } }
+        ).result;
+        return inner?.filter || [];
+      }
+      return Array.isArray(result) ? (result as LobbyCalendarFilter[]) : [];
+    } catch (error) {
+      logger.error("[ERROR] getLobbyCalendarFilters failed:", error);
+      throw error;
+    }
   }
 }

@@ -501,3 +501,82 @@ export interface NetworkError {
   message?: string;
   [key: string]: unknown;
 }
+
+// Exam related types
+export interface ExamOneTimePassword {
+  success: boolean;
+  statusCode?: number;
+  message?: string;
+  password?: string;
+}
+
+// Navigation menu types
+export interface NavigationMenuItem {
+  label: string;
+  muiIconName: string | null;
+  untitledUiIconName: string | null;
+  isCloseMenuVisible: boolean;
+  isMobileMenuVisible: boolean;
+  isExternalLink: boolean;
+  linkUrl: string;
+  isNewsMenu: boolean;
+  badgeContent: string | null;
+}
+
+export interface NavigationMenuCategory {
+  categoryName: string | null;
+  items: { menu: NavigationMenuItem }[];
+}
+
+// Unread news info types
+export interface UnreadNewsItem {
+  id: string;
+  microCmsId: string;
+  menuName: string[];
+  title: string;
+  isImportant: boolean;
+  isByMentor: boolean;
+  isRead: boolean;
+  publishedAt: string;
+  updatedAt: string;
+  description?: string;
+}
+
+export interface UnreadNewsInfo {
+  totalCount: number;
+  byMentorNewsCount: number;
+  hasImportantNews: boolean;
+  unreadNews: UnreadNewsItem[];
+}
+
+// Notification types
+export interface NotificationMessage {
+  id: string;
+  title?: string;
+  body?: string;
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
+// Interest/hobby types
+export interface UserInterest {
+  tagId: string;
+  weightId: string;
+  name: string;
+  color: string;
+  iconSet?: string;
+  iconName?: string;
+}
+
+export interface InterestWeight {
+  id: string;
+  label: string;
+  value: number;
+}
+
+// Lobby calendar filter types
+export interface LobbyCalendarFilter {
+  id: string;
+  label: string;
+  color: string;
+}
