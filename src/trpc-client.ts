@@ -218,7 +218,7 @@ export class TRPCClient {
         );
 
         // Try POST approach (JSON-RPC style)
-        const postUrl = method;
+        const postUrl = `/${method}`;
         logger.debug(`[URL] tRPC POST URL: ${postUrl}`);
 
         const postResponse = await this.httpClient.post<TRPCResponse<T>>(
