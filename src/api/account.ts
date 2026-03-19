@@ -397,14 +397,56 @@ export async function getUserInfo(ctx: ApiContext): Promise<unknown> {
   }
 }
 
+async function getAccountInfoFromNextAuthSession(
+  ctx: ApiContext,
+): Promise<NLobbyAccountInfo | null> {
+  try {
+    logger.info("[INFO] Trying /api/auth/session for account info...");
+    const response =
+      await ctx.httpClient.get<UnknownObject>("/api/auth/session");
+    const data = response.data;
+    if (!data || typeof data !== "object") return null;
+
+    const session = findSessionInData(data, new WeakSet<object>());
+    if (session) {
+      logger.info("[SUCCESS] Got account info from /api/auth/session");
+      return buildAccountInfoFromSession(session);
+    }
+
+    // /api/auth/session returns the session object directly (not nested under "session")
+    if (
+      Object.prototype.hasOwnProperty.call(data, "user") &&
+      data["user"] &&
+      typeof data["user"] === "object"
+    ) {
+      logger.info("[SUCCESS] Got account info from /api/auth/session (direct)");
+      return buildAccountInfoFromSession(data as UnknownObject);
+    }
+
+    return null;
+  } catch (error) {
+    logger.debug(
+      "[DEBUG] /api/auth/session failed:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
+    return null;
+  }
+}
+
 export async function getAccountInfoFromScript(
   ctx: ApiContext,
   endpoint: string = "/",
 ): Promise<NLobbyAccountInfo> {
-  logger.info(
-    `[INFO] Extracting account information from Next.js script at ${endpoint}`,
-  );
+  logger.info("[INFO] Extracting account information...");
 
+  // Primary: standard NextAuth session endpoint (reliable, no HTML parsing)
+  const fromSession = await getAccountInfoFromNextAuthSession(ctx);
+  if (fromSession) return fromSession;
+
+  // Fallback: scrape Next.js flight scripts from the page
+  logger.info(
+    `[INFO] Falling back to Next.js script extraction at ${endpoint}`,
+  );
   try {
     const html = await fetchRenderedHtml(ctx, endpoint);
     const sessionData = extractSessionFromNextJs(html);

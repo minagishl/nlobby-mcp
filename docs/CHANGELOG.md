@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.5] - 2026-03-20
+
+### Fixed
+
+- `nlobby profile` / `get_account_info` / `nlobby profile card` failing with "Could not locate session data in Next.js flight scripts": added `/api/auth/session` as the primary method for retrieving account info. Scraping the Next.js flight payload is now a fallback only, making the commands resilient to SSR changes in the N Lobby frontend.
+
 ### Changed
 
 - Rewrote `SKILLS.md` CLI section: grouped commands by topic and added all previously undocumented subcommands (`news unread-info`, `calendar test`, `calendar filters`, `profile card`, `profile update-access`, `health debug`, `health page`, `health trpc`, `health verify`).
