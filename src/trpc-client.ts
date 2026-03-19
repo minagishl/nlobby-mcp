@@ -312,7 +312,7 @@ export class TRPCClient {
       input: input,
     }).toString();
 
-    return `${methodUrl}?${queryString}`;
+    return `/${methodUrl}?${queryString}`;
   }
 
   // Specific methods for N Lobby API endpoints
