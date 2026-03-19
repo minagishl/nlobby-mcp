@@ -6,8 +6,6 @@ const legacyMcpMode = args.length === 0 && !process.stdin.isTTY;
 
 async function main() {
   if (explicitServe || legacyMcpMode) {
-    const { logger } = await import("./logger.js");
-    logger.forceProductionMode();
     const { NLobbyMCPServer } = await import("./mcp/server.js");
     const server = new NLobbyMCPServer();
     await server.start();

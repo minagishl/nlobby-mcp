@@ -7,15 +7,12 @@ export enum LogLevel {
 
 export class Logger {
   private static instance: Logger;
-  private logLevel: LogLevel = LogLevel.INFO;
-  private isProduction: boolean = false;
+  private logLevel: LogLevel;
 
   private constructor() {
-    // Check if running in production (when used as MCP server)
-    this.isProduction =
-      process.env.NODE_ENV === "production" ||
-      process.env.MCP_PRODUCTION === "true" ||
-      !process.stdout.isTTY;
+    const isDebug =
+      process.env.NLOBBY_DEBUG === "true" || process.env.DEBUG === "true";
+    this.logLevel = isDebug ? LogLevel.DEBUG : LogLevel.WARN;
   }
 
   static getInstance(): Logger {
@@ -29,38 +26,23 @@ export class Logger {
     this.logLevel = level;
   }
 
-  forceProductionMode(): void {
-    this.isProduction = true;
-  }
+  /** @deprecated No longer needed; default is already quiet. */
+  forceProductionMode(): void {}
 
   private log(level: LogLevel, message: string, ...args: unknown[]): void {
     if (level < this.logLevel) {
       return;
     }
 
-    // In production, only log errors and warnings to avoid noise
-    if (this.isProduction && level < LogLevel.WARN) {
-      return;
-    }
-
     const timestamp = new Date().toISOString();
     const levelName = LogLevel[level];
-    const prefix = `[${timestamp}] [${levelName}]`;
+    const line =
+      args.length > 0
+        ? `[${timestamp}] [${levelName}] ${message} ${args.map((a) => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ")}`
+        : `[${timestamp}] [${levelName}] ${message}`;
 
-    switch (level) {
-      case LogLevel.DEBUG:
-        console.debug(prefix, message, ...args);
-        break;
-      case LogLevel.INFO:
-        console.info(prefix, message, ...args);
-        break;
-      case LogLevel.WARN:
-        console.warn(prefix, message, ...args);
-        break;
-      case LogLevel.ERROR:
-        console.error(prefix, message, ...args);
-        break;
-    }
+    // Always write to stderr to avoid polluting stdout (MCP uses stdout for protocol)
+    process.stderr.write(line + "\n");
   }
 
   debug(message: string, ...args: unknown[]): void {
