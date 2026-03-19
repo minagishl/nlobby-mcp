@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.4] - 2026-03-20
+
+### Fixed
+
+- tRPC POST fallback URL was missing the leading slash, causing the method name to be concatenated directly onto the base URL (e.g. `/api/trpcrequiredCourse.getRequiredCourses` instead of `/api/trpc/requiredCourse.getRequiredCourses`). The 1.4.3 fix only addressed the GET path; the POST fallback in `TRPCClient.call()` was left unpatched.
+
 ### Changed
 
 - Updated `SKILLS.md` to reflect the latest CLI commands: added `login-help`, `exam check/finish/otp`, and `nav menus/notifications/interests/weights`.
