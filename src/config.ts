@@ -21,7 +21,7 @@ export const CONFIG = {
     baseUrl: process.env.NLOBBY_BASE_URL || "https://nlobby.nnn.ed.jp",
   },
   mcp: {
-    serverName: process.env.MCP_SERVER_NAME || "nlobby-mcp",
+    serverName: process.env.MCP_SERVER_NAME || "nlobby-cli",
     serverVersion: process.env.MCP_SERVER_VERSION || "1.3.0",
   },
   userAgent: process.env.USER_AGENT || getPlatformUserAgent(),

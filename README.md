@@ -1,4 +1,4 @@
-# N Lobby CLI & MCP Server
+# N Lobby CLI
 
 > **Note:** The developer assumes no responsibility for any damages that may occur from using this tool. This software was developed for educational purposes and its operation is not guaranteed.
 
@@ -28,8 +28,8 @@ npm install -g nlobby-cli
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/minagishl/nlobby-mcp.git
-cd nlobby-mcp
+git clone https://github.com/minagishl/nlobby-cli.git
+cd nlobby-cli
 ```
 
 2. Install dependencies:
@@ -50,7 +50,7 @@ Create a `.env` file if you need to override defaults (optional):
 
 ```env
 NLOBBY_BASE_URL=https://nlobby.nnn.ed.jp
-MCP_SERVER_NAME=nlobby-mcp
+MCP_SERVER_NAME=nlobby-cli
 MCP_SERVER_VERSION=1.0.0
 ```
 
