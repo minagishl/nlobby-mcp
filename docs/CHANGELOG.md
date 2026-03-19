@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Renamed all package names to CLI
+- Change the folders monitored by ES Lint
 
 ## [1.4.0] - 2026-03-19
 
