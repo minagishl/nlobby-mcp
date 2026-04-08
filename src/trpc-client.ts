@@ -172,8 +172,11 @@ export class TRPCClient {
     const request: TRPCRequest = {
       id: this.getNextRequestId(),
       method,
-      params,
     };
+
+    if (params !== undefined) {
+      request.params = params;
+    }
 
     try {
       logger.info(
@@ -306,8 +309,11 @@ export class TRPCClient {
     // The baseURL already includes /api/trpc, so we just need the method name
     const methodUrl = method;
 
-    // Always include input parameter, even if empty
-    const input = params ? JSON.stringify(params) : JSON.stringify({});
+    if (params === undefined) {
+      return `/${methodUrl}`;
+    }
+
+    const input = JSON.stringify(params);
     const queryString = new URLSearchParams({
       input: input,
     }).toString();

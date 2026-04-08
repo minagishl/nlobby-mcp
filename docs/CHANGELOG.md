@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed tRPC `void` input handling in `TRPCClient.call()`: requests without params no longer send `input={}` on GET or `params: {}` on POST fallback, preventing `user.updateLastAccess` from failing with `Expected void, received object`.
+
 ## [1.4.5] - 2026-03-20
 
 ### Fixed
