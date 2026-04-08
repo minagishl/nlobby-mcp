@@ -54,7 +54,8 @@ export function formatNewsDetail(detail: NLobbyNewsDetail): string {
     lines.push("");
     lines.push("Attachments:");
     for (const att of detail.attachments) {
-      lines.push(`  - ${att.fileName}: ${att.href}`);
+      const displayName = att.fileName.split("/").pop() || att.fileName;
+      lines.push(`  - ${displayName}: ${att.href}`);
     }
   }
 

@@ -27,6 +27,105 @@ function decodeHtmlContent(content: string): string {
   }
 }
 
+function normalizeDetailDescription(value: string): string {
+  const trimmed = value.trim();
+  // Next.js flight reference placeholder (e.g. "$2a")
+  if (/^\$[a-z0-9]+$/i.test(trimmed)) {
+    return "";
+  }
+  return trimmed;
+}
+
+function extractNewsDetailBodyFromDom(html: string): string {
+  try {
+    const $ = cheerio.load(html);
+    const lines = $('p.MuiTypography-body1')
+      .toArray()
+      .map((el) => $(el).text().replace(/\s+/g, " ").trim())
+      .filter((text) => text.length > 0);
+
+    if (lines.length === 0) {
+      return "";
+    }
+
+    return lines.join("\n");
+  } catch {
+    return "";
+  }
+}
+
+function extractNextFPushPayloads(html: string): string[] {
+  const marker = "self.__next_f.push(";
+  const payloads: string[] = [];
+  let searchStart = 0;
+
+  while (searchStart < html.length) {
+    const markerIndex = html.indexOf(marker, searchStart);
+    if (markerIndex === -1) {
+      break;
+    }
+
+    let cursor = markerIndex + marker.length;
+    while (cursor < html.length && /\s/.test(html[cursor])) {
+      cursor++;
+    }
+
+    if (html[cursor] !== "[") {
+      searchStart = cursor + 1;
+      continue;
+    }
+
+    const arrayStart = cursor;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let arrayEnd = -1;
+
+    for (let i = arrayStart; i < html.length; i++) {
+      const ch = html[i];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (ch === "[") {
+        depth++;
+      } else if (ch === "]") {
+        depth--;
+        if (depth === 0) {
+          arrayEnd = i;
+          break;
+        }
+      }
+    }
+
+    if (arrayEnd !== -1) {
+      payloads.push(html.slice(arrayStart, arrayEnd + 1));
+      searchStart = arrayEnd + 1;
+    } else {
+      break;
+    }
+  }
+
+  return payloads;
+}
+
 function searchForNewsDataInObject(
   obj: unknown,
   path: string = "",
@@ -349,26 +448,159 @@ function parseAnnouncementsWithCheerio(html: string): NLobbyAnnouncement[] {
   }
 }
 
+function parseAnnouncementsFromNewsLinks(html: string): NLobbyAnnouncement[] {
+  try {
+    const $ = cheerio.load(html);
+    const announcements: NLobbyAnnouncement[] = [];
+    const seenIds = new Set<string>();
+
+    $('a[href^="/news/"]').each((_index: number, element: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const $link = $(element as any);
+      const href = $link.attr("href");
+      if (!href) {
+        return;
+      }
+
+      const matched = href.match(/^\/news\/([^/?#]+)/);
+      const newsId = matched?.[1];
+      if (!newsId || seenIds.has(newsId)) {
+        return;
+      }
+
+      const title = $link.text().replace(/\s+/g, " ").trim();
+      if (!title || title.length < 2) {
+        return;
+      }
+
+      seenIds.add(newsId);
+      announcements.push({
+        id: newsId,
+        title,
+        content: "",
+        publishedAt: new Date(),
+        category: "General",
+        priority: "medium",
+        targetAudience: ["student"],
+        url: `${CONFIG.nlobby.baseUrl}/news/${newsId}`,
+        isImportant: false,
+        isUnread: false,
+      });
+    });
+
+    if (announcements.length > 0) {
+      logger.info(
+        `[TARGET] Anchor fallback extracted ${announcements.length} news links`,
+      );
+    }
+
+    return announcements;
+  } catch (error) {
+    logger.error(
+      "[ERROR] Anchor-based news parsing failed:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
+    return [];
+  }
+}
+
+function parseNewsFromRawHtmlFragments(html: string): NLobbyAnnouncement[] {
+  const decodedHtml = html.replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+  const marker = '"news":[';
+  let cursor = 0;
+  const candidates: unknown[][] = [];
+
+  while (cursor < decodedHtml.length) {
+    const markerIndex = decodedHtml.indexOf(marker, cursor);
+    if (markerIndex === -1) {
+      break;
+    }
+
+    const arrayStart = markerIndex + marker.length - 1;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let arrayEnd = -1;
+
+    for (let i = arrayStart; i < decodedHtml.length; i++) {
+      const ch = decodedHtml[i];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (ch === "[") {
+        depth++;
+      } else if (ch === "]") {
+        depth--;
+        if (depth === 0) {
+          arrayEnd = i;
+          break;
+        }
+      }
+    }
+
+    if (arrayEnd !== -1) {
+      const rawArray = decodedHtml.slice(arrayStart, arrayEnd + 1);
+      try {
+        const parsed = JSON.parse(rawArray);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          candidates.push(parsed);
+        }
+      } catch {
+        // Continue scanning other candidates
+      }
+      cursor = arrayEnd + 1;
+    } else {
+      break;
+    }
+  }
+
+  if (candidates.length === 0) {
+    return [];
+  }
+
+  candidates.sort((a, b) => b.length - a.length);
+  const best = candidates[0];
+  logger.info(
+    `[TARGET] Raw HTML fallback found news array candidates: ${candidates.length} (using length=${best.length})`,
+  );
+
+  return transformNewsToAnnouncements(best);
+}
+
 function parseNewsFromHtml(html: string): NLobbyAnnouncement[] {
   const announcements: NLobbyAnnouncement[] = [];
 
   try {
     logger.info("[INFO] Starting HTML parsing...");
 
-    const nextFPushMatches = html.match(/self\.__next_f\.push\((\[.*?\])\)/g);
+    const nextFPushPayloads = extractNextFPushPayloads(html);
 
-    if (nextFPushMatches && nextFPushMatches.length > 0) {
+    if (nextFPushPayloads.length > 0) {
       logger.info(
-        `[SUCCESS] Found ${nextFPushMatches.length} self.__next_f.push() calls`,
+        `[SUCCESS] Found ${nextFPushPayloads.length} self.__next_f.push() payloads`,
       );
 
-      for (let i = 0; i < nextFPushMatches.length; i++) {
-        const pushCall = nextFPushMatches[i];
+      for (let i = 0; i < nextFPushPayloads.length; i++) {
         try {
-          const jsonMatch = pushCall.match(/self\.__next_f\.push\((\[.*?\])\)/);
-          if (!jsonMatch) continue;
-
-          const pushData = JSON.parse(jsonMatch[1]);
+          const pushData = JSON.parse(nextFPushPayloads[i]);
 
           if (pushData.length >= 2 && typeof pushData[1] === "string") {
             const stringData = pushData[1];
@@ -450,6 +682,17 @@ function parseNewsFromHtml(html: string): NLobbyAnnouncement[] {
       return cheerioAnnouncements;
     }
 
+    // Anchor fallback for pages that hydrate list data client-side
+    const anchorAnnouncements = parseAnnouncementsFromNewsLinks(html);
+    if (anchorAnnouncements && anchorAnnouncements.length > 0) {
+      return anchorAnnouncements;
+    }
+
+    const rawHtmlAnnouncements = parseNewsFromRawHtmlFragments(html);
+    if (rawHtmlAnnouncements && rawHtmlAnnouncements.length > 0) {
+      return rawHtmlAnnouncements;
+    }
+
     // __NEXT_DATA__ fallback
     const nextDataMatches = [
       html.match(/window\.__NEXT_DATA__\s*=\s*({.*?})\s*(?:;|<\/script>)/s),
@@ -482,9 +725,9 @@ function parseNewsDetailFromHtml(
   newsId: string,
 ): NLobbyNewsDetail | null {
   try {
-    const nextFPushMatches = html.match(/self\.__next_f\.push\((\[.*?\])\)/g);
+    const nextFPushPayloads = extractNextFPushPayloads(html);
 
-    if (!nextFPushMatches || nextFPushMatches.length === 0) {
+    if (nextFPushPayloads.length === 0) {
       return null;
     }
 
@@ -492,13 +735,9 @@ function parseNewsDetailFromHtml(
     let contentData: string = "";
     const contentReferences: Map<string, string> = new Map();
 
-    for (let i = 0; i < nextFPushMatches.length; i++) {
-      const pushCall = nextFPushMatches[i];
+    for (let i = 0; i < nextFPushPayloads.length; i++) {
       try {
-        const jsonMatch = pushCall.match(/self\.__next_f\.push\((\[.*?\])\)/);
-        if (!jsonMatch) continue;
-
-        const pushData = JSON.parse(jsonMatch[1]);
+        const pushData = JSON.parse(nextFPushPayloads[i]);
 
         if (
           pushData.length >= 2 &&
@@ -507,19 +746,10 @@ function parseNewsDetailFromHtml(
         ) {
           const refKey = pushData[1].replace(/,$/, "");
 
-          if (i + 1 < nextFPushMatches.length) {
-            const nextPushCall = nextFPushMatches[i + 1];
-            const nextJsonMatch = nextPushCall.match(
-              /self\.__next_f\.push\((\[.*?\])\)/,
-            );
-            if (nextJsonMatch) {
-              const nextPushData = JSON.parse(nextJsonMatch[1]);
-              if (
-                nextPushData.length >= 2 &&
-                typeof nextPushData[1] === "string"
-              ) {
-                contentReferences.set(refKey, nextPushData[1]);
-              }
+          if (i + 1 < nextFPushPayloads.length) {
+            const nextPushData = JSON.parse(nextFPushPayloads[i + 1]);
+            if (nextPushData.length >= 2 && typeof nextPushData[1] === "string") {
+              contentReferences.set(refKey, nextPushData[1]);
             }
           }
           continue;
@@ -590,6 +820,366 @@ function parseNewsDetailFromHtml(
   }
 }
 
+function parseNewsDetailFromRawHtml(
+  html: string,
+  newsId: string,
+): NLobbyNewsDetail | null {
+  try {
+    const decodedHtml = html.replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+    const detailObjectStartToken = `{"newsId":"${newsId}"`;
+    let searchPos = 0;
+    let bestDetail: NLobbyNewsDetail | null = null;
+    let bestScore = -1;
+    while (searchPos < decodedHtml.length) {
+      const detailObjectStart = decodedHtml.indexOf(detailObjectStartToken, searchPos);
+      if (detailObjectStart === -1) {
+        break;
+      }
+
+      let objectEnd = -1;
+      let depth = 0;
+      let inString = false;
+      let escaped = false;
+
+      for (let i = detailObjectStart; i < decodedHtml.length; i++) {
+        const ch = decodedHtml[i];
+        if (inString) {
+          if (escaped) {
+            escaped = false;
+            continue;
+          }
+          if (ch === "\\") {
+            escaped = true;
+            continue;
+          }
+          if (ch === '"') {
+            inString = false;
+          }
+          continue;
+        }
+        if (ch === '"') {
+          inString = true;
+          continue;
+        }
+        if (ch === "{") {
+          depth++;
+        } else if (ch === "}") {
+          depth--;
+          if (depth === 0) {
+            objectEnd = i;
+            break;
+          }
+        }
+      }
+
+      if (objectEnd === -1) {
+        break;
+      }
+
+      const rawDetailObject = decodedHtml.slice(detailObjectStart, objectEnd + 1);
+      try {
+        const parsedDetail = JSON.parse(rawDetailObject) as Record<string, unknown>;
+        const header =
+          parsedDetail.header && typeof parsedDetail.header === "object"
+            ? (parsedDetail.header as Record<string, unknown>)
+            : {};
+        const documentTable =
+          parsedDetail.documentTable &&
+          typeof parsedDetail.documentTable === "object"
+            ? (parsedDetail.documentTable as Record<string, unknown>)
+            : {};
+
+        const publishedAtText =
+          typeof header.publishedAt === "string" ? header.publishedAt : "";
+        const normalizedPublishedAt = publishedAtText
+          .replace(/年|月/g, "-")
+          .replace(/日/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+        const publishedAt =
+          normalizedPublishedAt.length > 0
+            ? new Date(normalizedPublishedAt)
+            : new Date();
+        const safePublishedAt = isNaN(publishedAt.getTime())
+          ? new Date()
+          : publishedAt;
+
+        const rawDescription =
+          typeof parsedDetail.description === "string"
+            ? parsedDetail.description
+            : "";
+        let description = normalizeDetailDescription(
+          decodeHtmlContent(rawDescription),
+        );
+        if (!description) {
+          description = extractNewsDetailBodyFromDom(html);
+        }
+        const title =
+          typeof header.title === "string"
+            ? header.title
+            : typeof parsedDetail.title === "string"
+              ? parsedDetail.title
+              : "No Title";
+        const downloadItems = Array.isArray(documentTable.downloadItems)
+          ? (documentTable.downloadItems as Array<Record<string, unknown>>)
+          : [];
+        const score =
+          (title !== "No Title" ? 2 : 0) +
+          (description.length > 3 ? 2 : 0) +
+          (downloadItems.length > 0 ? 1 : 0);
+        const attachments = downloadItems
+          .map((item) => {
+            const href = typeof item.href === "string" ? item.href : "";
+            const fileName =
+              typeof item.fileName === "string" ? item.fileName : "";
+            const downloadFileName =
+              typeof item.downloadFileName === "string"
+                ? item.downloadFileName
+                : fileName;
+            if (!href || !fileName) {
+              return null;
+            }
+            return {
+              href: href.startsWith("http")
+                ? href
+                : `${CONFIG.nlobby.baseUrl}/${href}`,
+              fileName,
+              downloadFileName,
+            };
+          })
+          .filter(
+            (
+              item,
+            ): item is {
+              href: string;
+              fileName: string;
+              downloadFileName: string;
+            } => !!item,
+          );
+
+        const detail: NLobbyNewsDetail = {
+          id: newsId,
+          title,
+          content: description,
+          description,
+          publishedAt: safePublishedAt,
+          menuName: [],
+          isImportant: Boolean(header.isImportant),
+          isByMentor: Boolean(header.isByMentor),
+          attachments,
+          relatedEvents: [],
+          url: `${CONFIG.nlobby.baseUrl}/news/${newsId}`,
+        };
+        if (score > bestScore) {
+          bestScore = score;
+          bestDetail = detail;
+        }
+      } catch {
+        // try next match
+      }
+      searchPos = objectEnd + 1;
+    }
+    if (bestDetail) {
+      return bestDetail;
+    }
+
+    const idTokens = [`"id":"${newsId}"`, `"newsId":"${newsId}"`];
+    const idIndex = Math.max(
+      ...idTokens.map((token) => decodedHtml.indexOf(token)),
+    );
+    if (idIndex === -1) {
+      return null;
+    }
+
+    let objectStart = -1;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let i = idIndex; i >= 0; i--) {
+      const ch = decodedHtml[i];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === "}") {
+        depth++;
+      } else if (ch === "{") {
+        if (depth === 0) {
+          objectStart = i;
+          break;
+        }
+        depth--;
+      }
+    }
+    if (objectStart === -1) {
+      return null;
+    }
+
+    let objectEnd = -1;
+    depth = 0;
+    inString = false;
+    escaped = false;
+    for (let i = objectStart; i < decodedHtml.length; i++) {
+      const ch = decodedHtml[i];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === "{") {
+        depth++;
+      } else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          objectEnd = i;
+          break;
+        }
+      }
+    }
+    if (objectEnd === -1) {
+      return null;
+    }
+
+    const rawObject = decodedHtml.slice(objectStart, objectEnd + 1);
+    const parsedObject = JSON.parse(rawObject) as Record<string, unknown>;
+
+    if ("header" in parsedObject || "newsId" in parsedObject) {
+      const header =
+        parsedObject.header && typeof parsedObject.header === "object"
+          ? (parsedObject.header as Record<string, unknown>)
+          : {};
+      const documentTable =
+        parsedObject.documentTable &&
+        typeof parsedObject.documentTable === "object"
+          ? (parsedObject.documentTable as Record<string, unknown>)
+          : {};
+
+      const publishedAtText =
+        typeof header.publishedAt === "string" ? header.publishedAt : "";
+      const normalizedPublishedAt = publishedAtText
+        .replace(/年|月/g, "-")
+        .replace(/日/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const publishedAt =
+        normalizedPublishedAt.length > 0
+          ? new Date(normalizedPublishedAt)
+          : new Date();
+      const safePublishedAt = isNaN(publishedAt.getTime())
+        ? new Date()
+        : publishedAt;
+
+      const rawDescription =
+        typeof parsedObject.description === "string"
+          ? parsedObject.description
+          : "";
+      const description = decodeHtmlContent(rawDescription);
+      const title =
+        typeof header.title === "string"
+          ? header.title
+          : typeof parsedObject.title === "string"
+            ? parsedObject.title
+            : "No Title";
+
+      const downloadItems = Array.isArray(documentTable.downloadItems)
+        ? (documentTable.downloadItems as Array<Record<string, unknown>>)
+        : [];
+      const attachments = downloadItems
+        .map((item) => {
+          const href = typeof item.href === "string" ? item.href : "";
+          const fileName = typeof item.fileName === "string" ? item.fileName : "";
+          const downloadFileName =
+            typeof item.downloadFileName === "string"
+              ? item.downloadFileName
+              : fileName;
+          if (!href || !fileName) {
+            return null;
+          }
+          return {
+            href: href.startsWith("http") ? href : `${CONFIG.nlobby.baseUrl}/${href}`,
+            fileName,
+            downloadFileName,
+          };
+        })
+        .filter(
+          (
+            item,
+          ): item is { href: string; fileName: string; downloadFileName: string } =>
+            !!item,
+        );
+
+      return {
+        id: newsId,
+        title,
+        content: description,
+        description,
+        publishedAt: safePublishedAt,
+        menuName: [],
+        isImportant: Boolean(header.isImportant),
+        isByMentor: Boolean(header.isByMentor),
+        attachments,
+        relatedEvents: [],
+        url: `${CONFIG.nlobby.baseUrl}/news/${newsId}`,
+      };
+    }
+
+    const newsData = parsedObject as NewsData;
+    const description = normalizeDetailDescription(
+      typeof newsData.description === "string" ? newsData.description : "",
+    );
+    const content =
+      normalizeDetailDescription(decodeHtmlContent(description)) ||
+      extractNewsDetailBodyFromDom(html);
+
+    return {
+      id: newsData.id || newsId,
+      microCmsId: newsData.microCmsId,
+      title: newsData.title || "No Title",
+      content: content || description || "",
+      description,
+      publishedAt: newsData.publishedAt
+        ? new Date(newsData.publishedAt)
+        : new Date(),
+      menuName: Array.isArray(newsData.menuName) ? newsData.menuName : [],
+      isImportant: Boolean(newsData.isImportant),
+      isByMentor: Boolean(newsData.isByMentor),
+      attachments: newsData.attachments || [],
+      relatedEvents: newsData.relatedEvents || [],
+      targetUserQueryId: newsData.targetUserQueryId,
+      url: `${CONFIG.nlobby.baseUrl}/news/${newsId}`,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ---- Public module functions ----
 
 export async function getNews(ctx: ApiContext): Promise<NLobbyAnnouncement[]> {
@@ -604,16 +1194,10 @@ export async function getNews(ctx: ApiContext): Promise<NLobbyAnnouncement[]> {
       logger.info(`[SUCCESS] Retrieved ${news.length} news items from HTML`);
       return news;
     } else {
-      const debugInfo = `HTML scraping returned no data. Debug info:
-- Authentication status: ${ctx.nextAuth.isAuthenticated() ? "authenticated" : "not authenticated"}
-- HTTP cookies: ${ctx.httpClient.defaults.headers.Cookie ? "present" : "missing"}
-- HTML length: ${html.length} characters
-
-Troubleshooting steps:
-1. Run 'health_check' to verify connection
-2. Ensure you are properly authenticated using 'set_cookies'`;
-
-      throw new Error(debugInfo);
+      logger.warn(
+        "[WARNING] getNews could not extract news items from HTML or fallback; returning empty list",
+      );
+      return [];
     }
   } catch (error) {
     logger.error("[ERROR] getNews failed:", error);
@@ -637,7 +1221,9 @@ export async function getNewsDetail(
   try {
     const newsUrl = `/news/${newsId}`;
     const html = await fetchRenderedHtml(ctx, newsUrl);
-    const newsDetail = parseNewsDetailFromHtml(html, newsId);
+    const newsDetail =
+      parseNewsDetailFromHtml(html, newsId) ??
+      parseNewsDetailFromRawHtml(html, newsId);
 
     if (newsDetail) {
       return newsDetail;

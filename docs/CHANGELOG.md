@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed tRPC `void` input handling in `TRPCClient.call()`: requests without params no longer send `input={}` on GET or `params: {}` on POST fallback, preventing `user.updateLastAccess` from failing with `Expected void, received object`.
 - Fixed tRPC POST fallback payload format in `TRPCClient.call()`: it now sends raw tRPC input (or no body for `void`) instead of a JSON-RPC-style wrapper object, which was being validated as `object` by the server.
 - Added `postOnly` call option to `TRPCClient.call()` and applied it to `user.updateLastAccess`, so mutation-style methods can skip the initial GET probe and avoid noisy 404 logs.
+- Fixed news HTML parsing for modern Next.js flight payloads: replaced fragile regex extraction of `self.__next_f.push(...)` arrays with a balanced parser that correctly handles deeply nested payloads and restores `nlobby news` scraping.
+- Added a raw-HTML fallback for `getNews()`: when structured parsing fails, the CLI now scans embedded Next.js payload fragments for `"news":[...]` arrays and reconstructs the list without launching a browser.
+- Changed `getNews()` failure behavior: if both HTML parsing and fallback extraction return no items, `nlobby news` now returns an empty list (`No news found.`) instead of exiting with an error.
+- Fixed `getNewsDetail()` for modern payloads by adding a raw-HTML fallback that locates the target news object by `id` and reconstructs `news show <id>` output when legacy flight parsing fails.
+- Improved `getNewsDetail()` body extraction: when description resolves to a Next.js token placeholder, the CLI now falls back to rendered DOM paragraphs (`p.MuiTypography-body1`) so `news show <id>` includes readable article text.
 
 ## [1.4.5] - 2026-03-20
 
