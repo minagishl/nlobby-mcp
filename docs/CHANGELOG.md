@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed tRPC `void` input handling in `TRPCClient.call()`: requests without params no longer send `input={}` on GET or `params: {}` on POST fallback, preventing `user.updateLastAccess` from failing with `Expected void, received object`.
 - Fixed tRPC POST fallback payload format in `TRPCClient.call()`: it now sends raw tRPC input (or no body for `void`) instead of a JSON-RPC-style wrapper object, which was being validated as `object` by the server.
+- Added `postOnly` call option to `TRPCClient.call()` and applied it to `user.updateLastAccess`, so mutation-style methods can skip the initial GET probe and avoid noisy 404 logs.
 
 ## [1.4.5] - 2026-03-20
 

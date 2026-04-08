@@ -21,6 +21,9 @@ export interface TRPCResponse<T = unknown> {
 
 export type TRPCBatchRequest = Array<TRPCRequest>;
 export type TRPCBatchResponse = Array<TRPCResponse>;
+export interface TRPCCallOptions {
+  postOnly?: boolean;
+}
 
 export class TRPCClient {
   private httpClient: HttpClient;
@@ -168,7 +171,11 @@ export class TRPCClient {
     return this.requestId++;
   }
 
-  async call<T = unknown>(method: string, params?: unknown): Promise<T> {
+  async call<T = unknown>(
+    method: string,
+    params?: unknown,
+    options: TRPCCallOptions = {},
+  ): Promise<T> {
     try {
       logger.info(
         `[REQUEST] tRPC call: ${method}`,
@@ -181,36 +188,7 @@ export class TRPCClient {
         `[COOKIE] Request cookies: ${cookieHeader ? "present" : "missing"}`,
       );
 
-      // Try GET approach first (query-based tRPC)
-      logger.debug("Trying GET approach...");
-      try {
-        const url = this.buildTRPCUrl(method, params);
-        logger.debug(`[URL] tRPC GET URL: ${url}`);
-
-        const getResponse = await this.httpClient.get<TRPCResponse<T>>(url);
-        logger.debug(
-          `[SUCCESS] tRPC ${method} GET response status: ${getResponse.status}`,
-        );
-
-        if (getResponse.data.error) {
-          logger.error(
-            `[ERROR] tRPC ${method} GET returned error:`,
-            getResponse.data.error,
-          );
-          throw new Error(
-            `tRPC Error [${getResponse.data.error.code}]: ${getResponse.data.error.message}`,
-          );
-        }
-
-        logger.debug(`[SUCCESS] tRPC ${method} GET succeeded`);
-        return getResponse.data.result as T;
-      } catch (getError) {
-        logger.debug(`[WARNING] GET approach failed, trying POST approach...`);
-        logger.debug(
-          `[DEBUG] GET error details:`,
-          getError instanceof Error ? getError.message : "Unknown error",
-        );
-
+      const doPost = async (): Promise<T> => {
         // Try POST approach (tRPC body input)
         const postUrl = `/${method}`;
         logger.debug(`[URL] tRPC POST URL: ${postUrl}`);
@@ -242,6 +220,43 @@ export class TRPCClient {
 
         logger.debug(`[SUCCESS] tRPC ${method} POST succeeded`);
         return postResponse.data.result as T;
+      };
+
+      if (options.postOnly) {
+        logger.debug("POST-only mode enabled; skipping GET approach");
+        return await doPost();
+      }
+
+      // Try GET approach first (query-based tRPC)
+      logger.debug("Trying GET approach...");
+      try {
+        const url = this.buildTRPCUrl(method, params);
+        logger.debug(`[URL] tRPC GET URL: ${url}`);
+
+        const getResponse = await this.httpClient.get<TRPCResponse<T>>(url);
+        logger.debug(
+          `[SUCCESS] tRPC ${method} GET response status: ${getResponse.status}`,
+        );
+
+        if (getResponse.data.error) {
+          logger.error(
+            `[ERROR] tRPC ${method} GET returned error:`,
+            getResponse.data.error,
+          );
+          throw new Error(
+            `tRPC Error [${getResponse.data.error.code}]: ${getResponse.data.error.message}`,
+          );
+        }
+
+        logger.debug(`[SUCCESS] tRPC ${method} GET succeeded`);
+        return getResponse.data.result as T;
+      } catch (getError) {
+        logger.debug(`[WARNING] GET approach failed, trying POST approach...`);
+        logger.debug(
+          `[DEBUG] GET error details:`,
+          getError instanceof Error ? getError.message : "Unknown error",
+        );
+        return await doPost();
       }
     } catch (error) {
       logger.error(`[ERROR] tRPC call failed for ${method}:`, {
@@ -323,7 +338,9 @@ export class TRPCClient {
   }
 
   async updateLastAccess(): Promise<void> {
-    return this.call<void>("user.updateLastAccess");
+    return this.call<void>("user.updateLastAccess", undefined, {
+      postOnly: true,
+    });
   }
 
   async findMainNavigations(): Promise<unknown[]> {
