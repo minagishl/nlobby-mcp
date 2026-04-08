@@ -12,6 +12,7 @@ import {
   getNewsDetail,
   markNewsAsRead,
   getUnreadNewsInfo,
+  downloadNewsAttachment,
 } from "./news.js";
 import {
   getSchedule as _getSchedule,
@@ -218,6 +219,14 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
   async getUnreadNewsInfo(): Promise<UnreadNewsInfo> {
     return getUnreadNewsInfo(this);
+  }
+
+  async downloadNewsAttachment(
+    newsId: string,
+    attachmentIndex: number = 0,
+    outputDir: string = ".",
+  ): Promise<string> {
+    return downloadNewsAttachment(this, newsId, attachmentIndex, outputDir);
   }
 
   // ---- Schedule ----

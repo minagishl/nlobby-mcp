@@ -15,12 +15,13 @@
 
 ### News
 
-| Command                   | Options / Arguments                                                                                 | Description                       |
-| ------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `nlobby news`             | `--limit <n>` `--category <cat>` `--sort newest\|oldest\|title-asc\|title-desc` `--unread` `--json` | List news (default: 10, newest)   |
-| `nlobby news show <id>`   | `--json`                                                                                            | Show news article detail          |
-| `nlobby news read <ids…>` |                                                                                                     | Mark one or more articles as read |
-| `nlobby news unread-info` | `--json`                                                                                            | Show unread count and flags       |
+| Command                     | Options / Arguments                                                                                 | Description                                                         |
+| --------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `nlobby news`               | `--limit <n>` `--category <cat>` `--sort newest\|oldest\|title-asc\|title-desc` `--unread` `--json` | List news (default: 10, newest)                                     |
+| `nlobby news show <id>`     | `--json`                                                                                            | Show news article detail                                            |
+| `nlobby news download <id>` | `--index <n>` `--output-dir <dir>`                                                                  | Download one attachment (1-based index; uses authenticated session) |
+| `nlobby news read <ids…>`   |                                                                                                     | Mark one or more articles as read                                   |
+| `nlobby news unread-info`   | `--json`                                                                                            | Show unread count and flags                                         |
 
 ### Schedule & Calendar
 

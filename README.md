@@ -83,6 +83,9 @@ nlobby news --limit 20 --category お知らせ --sort oldest --unread
 # Show full article
 nlobby news show 980
 
+# Download the first attachment to /tmp
+nlobby news download 980 --index 1 --output-dir /tmp
+
 # Mark as read
 nlobby news read 980
 ```

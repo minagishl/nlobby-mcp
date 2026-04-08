@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Changed `getNews()` failure behavior: if both HTML parsing and fallback extraction return no items, `nlobby news` now returns an empty list (`No news found.`) instead of exiting with an error.
 - Fixed `getNewsDetail()` for modern payloads by adding a raw-HTML fallback that locates the target news object by `id` and reconstructs `news show <id>` output when legacy flight parsing fails.
 - Improved `getNewsDetail()` body extraction: when description resolves to a Next.js token placeholder, the CLI now falls back to rendered DOM paragraphs (`p.MuiTypography-body1`) so `news show <id>` includes readable article text.
+- Updated attachment URLs in `getNewsDetail()` to the authenticated `pdf-viewer` format (`/pdf-viewer/<encoded-path>?df=...&dcrt=news&cid=...`) required for actual PDF access.
+- Added `news download <id>` CLI command to download a selected attachment using the current authenticated session cookies (`--index` and `--output-dir` supported).
 
 ## [1.4.5] - 2026-03-20
 

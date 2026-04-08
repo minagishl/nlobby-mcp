@@ -3,6 +3,9 @@ import { fetchRenderedHtml } from "./shared.js";
 import { CONFIG } from "../config.js";
 import { logger } from "../logger.js";
 import * as cheerio from "cheerio";
+import fs from "node:fs/promises";
+import path from "node:path";
+import fetch from "node-fetch";
 import type {
   NLobbyAnnouncement,
   NLobbyNewsDetail,
@@ -39,7 +42,7 @@ function normalizeDetailDescription(value: string): string {
 function extractNewsDetailBodyFromDom(html: string): string {
   try {
     const $ = cheerio.load(html);
-    const lines = $('p.MuiTypography-body1')
+    const lines = $("p.MuiTypography-body1")
       .toArray()
       .map((el) => $(el).text().replace(/\s+/g, " ").trim())
       .filter((text) => text.length > 0);
@@ -52,6 +55,48 @@ function extractNewsDetailBodyFromDom(html: string): string {
   } catch {
     return "";
   }
+}
+
+function buildPdfViewerUrl(
+  rawHref: string,
+  downloadFileName: string,
+  newsId: string,
+): string {
+  let normalizedPath = rawHref.replace(/^\/+/, "");
+  if (rawHref.startsWith("http")) {
+    try {
+      const parsed = new URL(rawHref);
+      if (parsed.pathname.startsWith("/pdf-viewer/")) {
+        return rawHref;
+      }
+      normalizedPath = parsed.pathname.replace(/^\/+/, "");
+    } catch {
+      return rawHref;
+    }
+  }
+
+  const encodedPath = encodeURIComponent(normalizedPath);
+  const encodedName = encodeURIComponent(downloadFileName);
+  const encodedNewsId = encodeURIComponent(newsId);
+  return `${CONFIG.nlobby.baseUrl}/pdf-viewer/${encodedPath}?df=${encodedName}&dcrt=news&cid=${encodedNewsId}`;
+}
+
+function normalizeNewsAttachments(
+  attachments: Array<{
+    href: string;
+    fileName: string;
+    downloadFileName: string;
+  }>,
+  newsId: string,
+): Array<{ href: string; fileName: string; downloadFileName: string }> {
+  return attachments.map((attachment) => ({
+    ...attachment,
+    href: buildPdfViewerUrl(
+      attachment.href,
+      attachment.downloadFileName || attachment.fileName,
+      newsId,
+    ),
+  }));
 }
 
 function extractNextFPushPayloads(html: string): string[] {
@@ -748,7 +793,10 @@ function parseNewsDetailFromHtml(
 
           if (i + 1 < nextFPushPayloads.length) {
             const nextPushData = JSON.parse(nextFPushPayloads[i + 1]);
-            if (nextPushData.length >= 2 && typeof nextPushData[1] === "string") {
+            if (
+              nextPushData.length >= 2 &&
+              typeof nextPushData[1] === "string"
+            ) {
               contentReferences.set(refKey, nextPushData[1]);
             }
           }
@@ -807,7 +855,7 @@ function parseNewsDetailFromHtml(
       menuName: newsData.menuName || [],
       isImportant: newsData.isImportant || false,
       isByMentor: newsData.isByMentor || false,
-      attachments: newsData.attachments || [],
+      attachments: normalizeNewsAttachments(newsData.attachments || [], newsId),
       relatedEvents: newsData.relatedEvents || [],
       targetUserQueryId: newsData.targetUserQueryId,
       url: `${CONFIG.nlobby.baseUrl}/news/${newsId}`,
@@ -831,7 +879,10 @@ function parseNewsDetailFromRawHtml(
     let bestDetail: NLobbyNewsDetail | null = null;
     let bestScore = -1;
     while (searchPos < decodedHtml.length) {
-      const detailObjectStart = decodedHtml.indexOf(detailObjectStartToken, searchPos);
+      const detailObjectStart = decodedHtml.indexOf(
+        detailObjectStartToken,
+        searchPos,
+      );
       if (detailObjectStart === -1) {
         break;
       }
@@ -876,9 +927,15 @@ function parseNewsDetailFromRawHtml(
         break;
       }
 
-      const rawDetailObject = decodedHtml.slice(detailObjectStart, objectEnd + 1);
+      const rawDetailObject = decodedHtml.slice(
+        detailObjectStart,
+        objectEnd + 1,
+      );
       try {
-        const parsedDetail = JSON.parse(rawDetailObject) as Record<string, unknown>;
+        const parsedDetail = JSON.parse(rawDetailObject) as Record<
+          string,
+          unknown
+        >;
         const header =
           parsedDetail.header && typeof parsedDetail.header === "object"
             ? (parsedDetail.header as Record<string, unknown>)
@@ -956,6 +1013,10 @@ function parseNewsDetailFromRawHtml(
               downloadFileName: string;
             } => !!item,
           );
+        const normalizedAttachments = normalizeNewsAttachments(
+          attachments,
+          newsId,
+        );
 
         const detail: NLobbyNewsDetail = {
           id: newsId,
@@ -966,7 +1027,7 @@ function parseNewsDetailFromRawHtml(
           menuName: [],
           isImportant: Boolean(header.isImportant),
           isByMentor: Boolean(header.isByMentor),
-          attachments,
+          attachments: normalizedAttachments,
           relatedEvents: [],
           url: `${CONFIG.nlobby.baseUrl}/news/${newsId}`,
         };
@@ -1114,7 +1175,8 @@ function parseNewsDetailFromRawHtml(
       const attachments = downloadItems
         .map((item) => {
           const href = typeof item.href === "string" ? item.href : "";
-          const fileName = typeof item.fileName === "string" ? item.fileName : "";
+          const fileName =
+            typeof item.fileName === "string" ? item.fileName : "";
           const downloadFileName =
             typeof item.downloadFileName === "string"
               ? item.downloadFileName
@@ -1123,7 +1185,9 @@ function parseNewsDetailFromRawHtml(
             return null;
           }
           return {
-            href: href.startsWith("http") ? href : `${CONFIG.nlobby.baseUrl}/${href}`,
+            href: href.startsWith("http")
+              ? href
+              : `${CONFIG.nlobby.baseUrl}/${href}`,
             fileName,
             downloadFileName,
           };
@@ -1131,9 +1195,16 @@ function parseNewsDetailFromRawHtml(
         .filter(
           (
             item,
-          ): item is { href: string; fileName: string; downloadFileName: string } =>
-            !!item,
+          ): item is {
+            href: string;
+            fileName: string;
+            downloadFileName: string;
+          } => !!item,
         );
+      const normalizedAttachments = normalizeNewsAttachments(
+        attachments,
+        newsId,
+      );
 
       return {
         id: newsId,
@@ -1144,7 +1215,7 @@ function parseNewsDetailFromRawHtml(
         menuName: [],
         isImportant: Boolean(header.isImportant),
         isByMentor: Boolean(header.isByMentor),
-        attachments,
+        attachments: normalizedAttachments,
         relatedEvents: [],
         url: `${CONFIG.nlobby.baseUrl}/news/${newsId}`,
       };
@@ -1170,7 +1241,7 @@ function parseNewsDetailFromRawHtml(
       menuName: Array.isArray(newsData.menuName) ? newsData.menuName : [],
       isImportant: Boolean(newsData.isImportant),
       isByMentor: Boolean(newsData.isByMentor),
-      attachments: newsData.attachments || [],
+      attachments: normalizeNewsAttachments(newsData.attachments || [], newsId),
       relatedEvents: newsData.relatedEvents || [],
       targetUserQueryId: newsData.targetUserQueryId,
       url: `${CONFIG.nlobby.baseUrl}/news/${newsId}`,
@@ -1285,4 +1356,51 @@ export async function getUnreadNewsInfo(
     logger.error("[ERROR] getUnreadNewsInfo failed:", error);
     throw error;
   }
+}
+
+export async function downloadNewsAttachment(
+  ctx: ApiContext,
+  newsId: string,
+  attachmentIndex: number = 0,
+  outputDir: string = ".",
+): Promise<string> {
+  const detail = await getNewsDetail(ctx, newsId);
+  const attachments = detail.attachments || [];
+  if (attachments.length === 0) {
+    throw new Error(`No attachments found for news ID: ${newsId}`);
+  }
+  if (attachmentIndex < 0 || attachmentIndex >= attachments.length) {
+    throw new Error(
+      `Attachment index out of range: ${attachmentIndex + 1} (available: 1-${attachments.length})`,
+    );
+  }
+
+  const attachment = attachments[attachmentIndex];
+  const targetName =
+    attachment.downloadFileName ||
+    attachment.fileName.split("/").pop() ||
+    `news-${newsId}-attachment-${attachmentIndex + 1}.pdf`;
+  const outputPath = path.resolve(outputDir, targetName);
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
+
+  const response = await fetch(attachment.href, {
+    method: "GET",
+    headers: {
+      Cookie: ctx.httpClient.defaults.headers["Cookie"] || "",
+      "User-Agent": CONFIG.userAgent,
+      Referer: `${CONFIG.nlobby.baseUrl}/news/${newsId}`,
+      Accept: "application/pdf,*/*",
+    },
+    redirect: "follow",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to download attachment (${response.status} ${response.statusText})`,
+    );
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  await fs.writeFile(outputPath, buffer);
+  return outputPath;
 }

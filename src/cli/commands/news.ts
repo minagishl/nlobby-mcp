@@ -145,5 +145,29 @@ export function buildNewsCommand(api: NLobbyApi): Command {
       }
     });
 
+  news
+    .command("download <id>")
+    .description("Download attachment from a news detail")
+    .option(
+      "--index <n>",
+      "Attachment index to download (1-based, default: 1)",
+      "1",
+    )
+    .option("--output-dir <dir>", "Directory to save downloaded file", ".")
+    .action(async (id: string, opts: { index: string; outputDir: string }) => {
+      try {
+        const index = Math.max(1, parseInt(opts.index, 10) || 1) - 1;
+        const savedPath = await api.downloadNewsAttachment(
+          id,
+          index,
+          opts.outputDir,
+        );
+        console.log(`[OK] Downloaded attachment to: ${savedPath}`);
+      } catch (err) {
+        console.error("[FAIL]", err instanceof Error ? err.message : err);
+        process.exit(1);
+      }
+    });
+
   return news;
 }
