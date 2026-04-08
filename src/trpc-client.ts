@@ -169,15 +169,6 @@ export class TRPCClient {
   }
 
   async call<T = unknown>(method: string, params?: unknown): Promise<T> {
-    const request: TRPCRequest = {
-      id: this.getNextRequestId(),
-      method,
-    };
-
-    if (params !== undefined) {
-      request.params = params;
-    }
-
     try {
       logger.info(
         `[REQUEST] tRPC call: ${method}`,
@@ -220,13 +211,14 @@ export class TRPCClient {
           getError instanceof Error ? getError.message : "Unknown error",
         );
 
-        // Try POST approach (JSON-RPC style)
+        // Try POST approach (tRPC body input)
         const postUrl = `/${method}`;
         logger.debug(`[URL] tRPC POST URL: ${postUrl}`);
+        const postBody = params === undefined ? undefined : params;
 
         const postResponse = await this.httpClient.post<TRPCResponse<T>>(
           postUrl,
-          request,
+          postBody,
           {
             headers: {
               "Content-Type": "application/json",
