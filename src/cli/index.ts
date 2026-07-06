@@ -27,7 +27,7 @@ export function buildProgram(): Command {
   const program = new Command()
     .name("nlobby")
     .description("N Lobby CLI — access N Lobby from the command line")
-    .version("1.5.0");
+    .version("1.6.0");
 
   program.addCommand(buildLoginCommand(api));
   program.addCommand(buildCookiesCommand(api));

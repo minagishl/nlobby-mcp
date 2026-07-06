@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-07-07
+
 ### Added
 
 - Mentor news support: `getNews({ tab: "mentor" })` fetches `/news?tab=mentor` for mentor announcements.
@@ -230,7 +232,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Production logging streamlined and build output trimmed.
 
-[unreleased]: https://github.com/minagishl/nlobby-cli/compare/v1.5.0...HEAD
+[unreleased]: https://github.com/minagishl/nlobby-cli/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/minagishl/nlobby-cli/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/minagishl/nlobby-cli/compare/v1.4.5...v1.5.0
 [1.4.5]: https://github.com/minagishl/nlobby-cli/compare/v1.4.3...v1.4.5
 [1.4.3]: https://github.com/minagishl/nlobby-cli/compare/v1.4.2...v1.4.3
