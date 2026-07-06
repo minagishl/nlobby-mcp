@@ -123,7 +123,19 @@ export class NLobbyApi implements ApiContext {
     this.httpClient.interceptors.request.use((config) => {
       if (this.session) {
         config.headers["Authorization"] = `Bearer ${this.session.accessToken}`;
+        return config;
       }
+
+      const sessionToken = this.nextAuth.getSessionToken();
+      if (sessionToken) {
+        config.headers["Authorization"] = `Bearer ${sessionToken}`;
+      }
+
+      const csrfToken = this.nextAuth.getCsrfHeaderValue();
+      if (csrfToken) {
+        config.headers["X-CSRF-Token"] = csrfToken;
+      }
+
       return config;
     });
 

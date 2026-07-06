@@ -529,12 +529,7 @@ export async function getStudentCardScreenshot(ctx: ApiContext): Promise<{
 export async function updateLastAccess(ctx: ApiContext): Promise<boolean> {
   logger.info("[INFO] Updating last access...");
   try {
-    await ctx.httpClient.post("/api/trpc/user.updateLastAccess", null, {
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: ctx.nextAuth.getCookieHeader(),
-      },
-    });
+    await ctx.trpcClient.updateLastAccess();
     logger.info("[SUCCESS] updateLastAccess succeeded");
     return true;
   } catch (error) {

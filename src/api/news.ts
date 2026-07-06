@@ -1322,20 +1322,12 @@ export async function markNewsAsRead(
 ): Promise<unknown> {
   logger.info(`[INFO] Marking news article ${id} as read`);
   try {
-    const result = await ctx.httpClient.post(
-      "/api/trpc/news.upsertBrowsingHistory",
-      `"${id}"`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: ctx.nextAuth.getCookieHeader(),
-          Referer: `https://nlobby.nnn.ed.jp/news/${id}`,
-        },
-      },
-    );
+    const result = await ctx.trpcClient.call("news.upsertBrowsingHistory", id, {
+      postOnly: true,
+    });
 
     logger.info(`[SUCCESS] News article ${id} marked as read`);
-    return result.data;
+    return result;
   } catch (error) {
     logger.error(`[ERROR] Failed to mark news ${id} as read:`, error);
     throw error;

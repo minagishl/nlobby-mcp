@@ -202,19 +202,13 @@ export async function isExamDay(
 export async function finishExamDayMode(ctx: ApiContext): Promise<boolean> {
   logger.info("[INFO] Finishing exam day mode...");
   try {
-    const result = await ctx.httpClient.post(
-      "/api/trpc/exam.finishExamDayMode",
-      "{}",
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Cookie: ctx.nextAuth.getCookieHeader(),
-        },
-      },
+    const result = await ctx.trpcClient.call<boolean>(
+      "exam.finishExamDayMode",
+      undefined,
+      { postOnly: true },
     );
     logger.info("[SUCCESS] finishExamDayMode succeeded");
-    const data = result.data as { result?: { data?: unknown } };
-    return data?.result?.data === true;
+    return result === true;
   } catch (error) {
     logger.error("[ERROR] finishExamDayMode failed:", error);
     throw error;

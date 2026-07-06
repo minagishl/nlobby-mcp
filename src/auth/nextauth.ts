@@ -16,15 +16,22 @@ export class NextAuthHandler {
     const cookiePairs = cookieString.split(";");
 
     for (const pair of cookiePairs) {
-      const [name, value] = pair.trim().split("=");
-      if (name && value) {
-        if (name === "__Secure-next-auth.session-token") {
-          cookies.sessionToken = decodeURIComponent(value);
-        } else if (name === "__Host-next-auth.csrf-token") {
-          cookies.csrfToken = decodeURIComponent(value);
-        } else if (name === "__Secure-next-auth.callback-url") {
-          cookies.callbackUrl = decodeURIComponent(value);
-        }
+      const trimmed = pair.trim();
+      if (!trimmed) continue;
+
+      const separatorIndex = trimmed.indexOf("=");
+      if (separatorIndex <= 0) continue;
+
+      const name = trimmed.slice(0, separatorIndex);
+      const value = trimmed.slice(separatorIndex + 1);
+      if (!value) continue;
+
+      if (name === "__Secure-next-auth.session-token") {
+        cookies.sessionToken = decodeURIComponent(value);
+      } else if (name === "__Host-next-auth.csrf-token") {
+        cookies.csrfToken = decodeURIComponent(value);
+      } else if (name === "__Secure-next-auth.callback-url") {
+        cookies.callbackUrl = decodeURIComponent(value);
       }
     }
 
@@ -74,6 +81,38 @@ export class NextAuthHandler {
 
   getSessionToken(): string | null {
     return this.cookies.sessionToken || null;
+  }
+
+  getCsrfHeaderValue(): string | null {
+    if (!this.cookies.csrfToken) {
+      return null;
+    }
+
+    const pipeIndex = this.cookies.csrfToken.indexOf("|");
+    return pipeIndex >= 0
+      ? this.cookies.csrfToken.slice(0, pipeIndex)
+      : this.cookies.csrfToken;
+  }
+
+  getAuthHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {};
+
+    const sessionToken = this.getSessionToken();
+    if (sessionToken) {
+      headers["Authorization"] = `Bearer ${sessionToken}`;
+    }
+
+    const csrfHeader = this.getCsrfHeaderValue();
+    if (csrfHeader) {
+      headers["X-CSRF-Token"] = csrfHeader;
+    }
+
+    const cookieHeader = this.getCookieHeader();
+    if (cookieHeader) {
+      headers["Cookie"] = cookieHeader;
+    }
+
+    return headers;
   }
 
   async decodeSessionToken(): Promise<{ token: string } | null> {

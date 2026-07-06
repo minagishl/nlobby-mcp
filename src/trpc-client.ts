@@ -108,7 +108,7 @@ export class TRPCClient {
       }
 
       // Add CSRF token to headers if available
-      const csrfToken = this.nextAuth.getCookies().csrfToken;
+      const csrfToken = this.nextAuth.getCsrfHeaderValue();
       if (csrfToken) {
         config.headers["X-CSRF-Token"] = csrfToken;
         logger.debug("Added CSRF token to tRPC request");
