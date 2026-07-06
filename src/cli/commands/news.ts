@@ -82,20 +82,35 @@ export function buildNewsCommand(api: NLobbyApi): Command {
   news
     .command("show <id>")
     .description("Show news detail")
+    .option("--mark-read", "Mark the article as read after viewing")
     .option("--json", "Output raw JSON")
-    .action(async (id: string, opts: { json?: boolean }) => {
-      try {
-        const detail = await api.getNewsDetail(id);
-        if (opts.json) {
-          console.log(JSON.stringify(detail, null, 2));
-        } else {
-          console.log(formatNewsDetail(detail));
+    .action(
+      async (id: string, opts: { markRead?: boolean; json?: boolean }) => {
+        try {
+          const detail = await api.getNewsDetail(id);
+
+          if (opts.markRead) {
+            try {
+              await api.markNewsAsRead(id);
+            } catch (markErr) {
+              console.error(
+                "[WARN]",
+                markErr instanceof Error ? markErr.message : markErr,
+              );
+            }
+          }
+
+          if (opts.json) {
+            console.log(JSON.stringify(detail, null, 2));
+          } else {
+            console.log(formatNewsDetail(detail));
+          }
+        } catch (err) {
+          console.error("[FAIL]", err instanceof Error ? err.message : err);
+          process.exit(1);
         }
-      } catch (err) {
-        console.error("[FAIL]", err instanceof Error ? err.message : err);
-        process.exit(1);
-      }
-    });
+      },
+    );
 
   news
     .command("read <ids...>")

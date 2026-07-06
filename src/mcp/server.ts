@@ -72,6 +72,12 @@ export class NLobbyMCPServer {
             description: "Required courses and academic information",
             mimeType: "application/json",
           },
+          {
+            uri: "nlobby://learning-resources",
+            name: "Learning Resources",
+            description: "Learning materials, assignments, and study resources",
+            mimeType: "application/json",
+          },
         ],
       };
     });
@@ -112,7 +118,7 @@ export class NLobbyMCPServer {
             }
 
             case "nlobby://user-profile": {
-              const userInfo = await this.api.getUserInfo();
+              const userInfo = await this.api.getAccountInfoFromScript();
               return {
                 contents: [
                   {
@@ -132,6 +138,19 @@ export class NLobbyMCPServer {
                     uri,
                     mimeType: "application/json",
                     text: JSON.stringify(courses, null, 2),
+                  },
+                ],
+              };
+            }
+
+            case "nlobby://learning-resources": {
+              const resources = await this.api.getLearningResources();
+              return {
+                contents: [
+                  {
+                    uri,
+                    mimeType: "application/json",
+                    text: JSON.stringify(resources, null, 2),
                   },
                 ],
               };
@@ -537,6 +556,45 @@ export class NLobbyMCPServer {
             inputSchema: {
               type: "object",
               properties: {},
+            },
+          },
+          {
+            name: "get_learning_resources",
+            description: "Get learning resources and study materials",
+            inputSchema: {
+              type: "object",
+              properties: {
+                subject: {
+                  type: "string",
+                  description: "Filter by subject (optional)",
+                },
+              },
+            },
+          },
+          {
+            name: "download_news_attachment",
+            description:
+              "Download a news article attachment using the authenticated session",
+            inputSchema: {
+              type: "object",
+              properties: {
+                newsId: {
+                  type: "string",
+                  description: "The ID of the news article",
+                },
+                index: {
+                  type: "number",
+                  description:
+                    "Attachment index to download (0-based, default: 0)",
+                  default: 0,
+                },
+                outputDir: {
+                  type: "string",
+                  description: "Directory to save the file (default: .)",
+                  default: ".",
+                },
+              },
+              required: ["newsId"],
             },
           },
         ],
@@ -1418,6 +1476,73 @@ export class NLobbyMCPServer {
                   {
                     type: "text",
                     text: JSON.stringify(filters, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "get_learning_resources":
+            try {
+              const { subject } = args as { subject?: string };
+              const resources = await this.api.getLearningResources(subject);
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(resources, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "download_news_attachment":
+            try {
+              const {
+                newsId,
+                index = 0,
+                outputDir = ".",
+              } = args as {
+                newsId: string;
+                index?: number;
+                outputDir?: string;
+              };
+              const savedPath = await this.api.downloadNewsAttachment(
+                newsId,
+                index,
+                outputDir,
+              );
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(
+                      {
+                        message: "Attachment downloaded successfully",
+                        path: savedPath,
+                        newsId,
+                        index,
+                      },
+                      null,
+                      2,
+                    ),
                   },
                 ],
               };

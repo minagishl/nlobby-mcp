@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-07-07
+
+### Added
+
+- `nlobby courses resources` — expose learning resources API (`GET /api/learning-resources`) from the CLI with `--subject` filter.
+- `nlobby discover` — show built-in feature-to-CLI mapping and live navigation menus from the site API.
+- `nlobby page <path>` — fetch authenticated page content for any N Lobby path (covers pages without dedicated commands).
+- MCP `get_learning_resources` tool and `nlobby://learning-resources` resource.
+- MCP `download_news_attachment` tool for parity with `nlobby news download`.
+
+### Changed
+
+- `nlobby courses` now supports `--category` filter (parity with MCP `get_required_courses`).
+- `nlobby calendar` now supports `--period today|week|month` (parity with MCP `get_calendar_events`).
+- `nlobby news show` supports `--mark-read` (parity with MCP `get_news_detail markAsRead`).
+- `nlobby nav menus` now prints menu link URLs for site discovery.
+- MCP `nlobby://user-profile` resource now uses `getAccountInfoFromScript` instead of the legacy `/api/user` endpoint.
+
 ### Fixed
 
 - Fixed tRPC `void` input handling in `TRPCClient.call()`: requests without params no longer send `input={}` on GET or `params: {}` on POST fallback, preventing `user.updateLastAccess` from failing with `Expected void, received object`.
@@ -187,7 +205,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Production logging streamlined and build output trimmed.
 
-[unreleased]: https://github.com/minagishl/nlobby-cli/compare/v1.4.3...HEAD
+[unreleased]: https://github.com/minagishl/nlobby-cli/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/minagishl/nlobby-cli/compare/v1.4.5...v1.5.0
+[1.4.5]: https://github.com/minagishl/nlobby-cli/compare/v1.4.3...v1.4.5
 [1.4.3]: https://github.com/minagishl/nlobby-cli/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/minagishl/nlobby-cli/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/minagishl/nlobby-cli/compare/v1.4.0...v1.4.1

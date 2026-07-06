@@ -34,6 +34,10 @@ export function buildCalendarCommand(api: NLobbyApi): Command {
     .option("--from <date>", "Start date (YYYY-MM-DD)")
     .option("--to <date>", "End date (YYYY-MM-DD)")
     .option(
+      "--period <period>",
+      "Predefined period: today|week|month (overrides --from/--to)",
+    )
+    .option(
       "--type <type>",
       "Calendar type: personal|school (default: personal)",
       "personal",
@@ -43,6 +47,7 @@ export function buildCalendarCommand(api: NLobbyApi): Command {
       async (opts: {
         from?: string;
         to?: string;
+        period?: string;
         type: string;
         json?: boolean;
       }) => {
@@ -51,10 +56,32 @@ export function buildCalendarCommand(api: NLobbyApi): Command {
             opts.type === "school"
               ? CalendarType.SCHOOL
               : CalendarType.PERSONAL;
-          const dateRange =
-            opts.from && opts.to
-              ? api.createDateRange(opts.from, opts.to)
-              : api.createWeekDateRange();
+
+          let dateRange;
+          if (opts.period) {
+            switch (opts.period) {
+              case "today":
+                dateRange = api.createSingleDayRange(new Date());
+                break;
+              case "week":
+                dateRange = api.createWeekDateRange();
+                break;
+              case "month":
+                dateRange = api.createMonthDateRange();
+                break;
+              default:
+                console.error(
+                  '[FAIL] Invalid period. Use "today", "week", or "month".',
+                );
+                process.exit(1);
+            }
+          } else if (opts.from && opts.to) {
+            dateRange = api.createDateRange(opts.from, opts.to);
+          } else if (opts.from) {
+            dateRange = api.createSingleDayRange(opts.from);
+          } else {
+            dateRange = api.createWeekDateRange();
+          }
 
           const events = await api.getGoogleCalendarEvents(calType, dateRange);
           if (opts.json) {

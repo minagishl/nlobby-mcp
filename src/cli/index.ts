@@ -16,6 +16,8 @@ import { buildHealthCommand } from "./commands/health.js";
 import { buildServeCommand } from "./commands/serve.js";
 import { buildExamCommand } from "./commands/exam.js";
 import { buildNavigationCommand } from "./commands/navigation.js";
+import { buildDiscoverCommand } from "./commands/discover.js";
+import { buildPageCommand } from "./commands/page.js";
 
 export function buildProgram(): Command {
   const api = new NLobbyApi();
@@ -23,7 +25,7 @@ export function buildProgram(): Command {
   const program = new Command()
     .name("nlobby")
     .description("N Lobby CLI — access N Lobby from the command line")
-    .version("1.4.5");
+    .version("1.5.0");
 
   program.addCommand(buildLoginCommand(api));
   program.addCommand(buildCookiesCommand(api));
@@ -36,6 +38,8 @@ export function buildProgram(): Command {
   program.addCommand(buildHealthCommand(api));
   program.addCommand(buildExamCommand(api));
   program.addCommand(buildNavigationCommand(api));
+  program.addCommand(buildDiscoverCommand(api));
+  program.addCommand(buildPageCommand(api));
   program.addCommand(buildServeCommand());
 
   return program;

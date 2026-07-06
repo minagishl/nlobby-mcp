@@ -24,9 +24,13 @@ export function buildNavigationCommand(api: NLobbyApi): Command {
                 console.log(`\n── ${category.categoryName} ──`);
               }
               for (const { menu } of category.items) {
+                const external = menu.isExternalLink ? " [external]" : "";
                 console.log(
-                  `  ${menu.label}${menu.badgeContent ? ` (${menu.badgeContent})` : ""}`,
+                  `  ${menu.label}${menu.badgeContent ? ` (${menu.badgeContent})` : ""}${external}`,
                 );
+                if (menu.linkUrl) {
+                  console.log(`    ${menu.linkUrl}`);
+                }
               }
             }
           }

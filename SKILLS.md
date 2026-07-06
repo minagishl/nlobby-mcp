@@ -18,28 +18,36 @@
 | Command                     | Options / Arguments                                                                                 | Description                                                         |
 | --------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | `nlobby news`               | `--limit <n>` `--category <cat>` `--sort newest\|oldest\|title-asc\|title-desc` `--unread` `--json` | List news (default: 10, newest)                                     |
-| `nlobby news show <id>`     | `--json`                                                                                            | Show news article detail                                            |
+| `nlobby news show <id>`     | `--mark-read` `--json`                                                                              | Show news article detail                                            |
 | `nlobby news download <id>` | `--index <n>` `--output-dir <dir>`                                                                  | Download one attachment (1-based index; uses authenticated session) |
 | `nlobby news read <ids…>`   |                                                                                                     | Mark one or more articles as read                                   |
 | `nlobby news unread-info`   | `--json`                                                                                            | Show unread count and flags                                         |
 
 ### Schedule & Calendar
 
-| Command                   | Options / Arguments                                              | Description                                |
-| ------------------------- | ---------------------------------------------------------------- | ------------------------------------------ |
-| `nlobby schedule [date]`  | `--json`                                                         | Show schedule (YYYY-MM-DD, default: today) |
-| `nlobby calendar`         | `--from <date>` `--to <date>` `--type personal\|school` `--json` | Show calendar events (default: this week)  |
-| `nlobby calendar test`    | `--from <date>` `--to <date>` `--json`                           | Test both calendar endpoints               |
-| `nlobby calendar filters` | `--json`                                                         | Show lobby calendar filter list            |
+| Command                   | Options / Arguments                                                                            | Description                                |
+| ------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `nlobby schedule [date]`  | `--json`                                                                                       | Show schedule (YYYY-MM-DD, default: today) |
+| `nlobby calendar`         | `--from <date>` `--to <date>` `--period today\|week\|month` `--type personal\|school` `--json` | Show calendar events (default: this week)  |
+| `nlobby calendar test`    | `--from <date>` `--to <date>` `--json`                                                         | Test both calendar endpoints               |
+| `nlobby calendar filters` | `--json`                                                                                       | Show lobby calendar filter list            |
 
 ### Courses & Exam
 
-| Command                    | Options / Arguments                     | Description                    |
-| -------------------------- | --------------------------------------- | ------------------------------ |
-| `nlobby courses`           | `--grade <n>` `--semester <n>` `--json` | Show required courses          |
-| `nlobby exam check [date]` | `--json`                                | Check if a date is an exam day |
-| `nlobby exam finish`       | `--json`                                | Finish exam day mode           |
-| `nlobby exam otp`          | `--json`                                | Get one-time password for exam |
+| Command                    | Options / Arguments                                         | Description                    |
+| -------------------------- | ----------------------------------------------------------- | ------------------------------ |
+| `nlobby courses`           | `--grade <n>` `--semester <n>` `--category <name>` `--json` | Show required courses          |
+| `nlobby courses resources` | `--subject <name>` `--json`                                 | Show learning resources        |
+| `nlobby exam check [date]` | `--json`                                                    | Check if a date is an exam day |
+| `nlobby exam finish`       | `--json`                                                    | Finish exam day mode           |
+| `nlobby exam otp`          | `--json`                                                    | Get one-time password for exam |
+
+### Discover & Pages
+
+| Command              | Options / Arguments     | Description                                     |
+| -------------------- | ----------------------- | ----------------------------------------------- |
+| `nlobby discover`    | `--json`                | Map site features to CLI commands and nav menus |
+| `nlobby page <path>` | `--length <n>` `--json` | Fetch authenticated page content by URL path    |
 
 ### Profile
 
@@ -89,6 +97,8 @@
 | `test_calendar_endpoints`     | `from_date?` `to_date?`                            | Test both calendar endpoints            |
 | `get_calendar_filters`        |                                                    | Lobby calendar filter list              |
 | `get_required_courses`        | `grade?` `semester?` `category?`                   | Required courses with progress tracking |
+| `get_learning_resources`      | `subject?`                                         | Learning materials and study resources  |
+| `download_news_attachment`    | `newsId` `index?` `outputDir?`                     | Download a news article attachment      |
 | `check_exam_day`              | `date?`                                            | Check if date is an exam day            |
 | `finish_exam_day_mode`        |                                                    | Finish exam day mode                    |
 | `get_exam_otp`                |                                                    | Get one-time password for exam          |
@@ -113,9 +123,10 @@
 
 ## MCP Resources
 
-| URI                         | Name             | Description                               |
-| --------------------------- | ---------------- | ----------------------------------------- |
-| `nlobby://news`             | School News      | Latest school news and notices            |
-| `nlobby://schedule`         | School Schedule  | Daily class schedule and events           |
-| `nlobby://user-profile`     | User Profile     | Current user information and preferences  |
-| `nlobby://required-courses` | Required Courses | Required courses and academic information |
+| URI                           | Name               | Description                               |
+| ----------------------------- | ------------------ | ----------------------------------------- |
+| `nlobby://news`               | School News        | Latest school news and notices            |
+| `nlobby://schedule`           | School Schedule    | Daily class schedule and events           |
+| `nlobby://user-profile`       | User Profile       | Current user information and preferences  |
+| `nlobby://required-courses`   | Required Courses   | Required courses and academic information |
+| `nlobby://learning-resources` | Learning Resources | Learning materials and study resources    |
