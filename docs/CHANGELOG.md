@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Shared secure portal auth/fetch helpers (`resolveSecurePortalContext`) moved to `src/api/secure-portal.ts` for reuse across schooling and designated school.
+- MCP server split into feature modules under `src/mcp/tools/` and `src/mcp/resources/`; `server.ts` now registers tools via a central registry instead of inline JSON and switch cases.
 
 ### Fixed
 
