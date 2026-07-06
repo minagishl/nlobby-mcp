@@ -12,7 +12,31 @@ import type {
   NewsData,
   NewsItem,
   UnreadNewsInfo,
+  UnreadNewsItem,
 } from "../types.js";
+
+interface UnreadNewsCountData {
+  totalCount: number;
+  byMentorNewsCount: number;
+  hasImportantNews: boolean;
+  topUnreadNewsIds: string[];
+}
+
+function unwrapUnreadNewsCountData(
+  response: UnreadNewsCountData | { data: UnreadNewsCountData },
+): UnreadNewsCountData {
+  if (
+    response &&
+    typeof response === "object" &&
+    "data" in response &&
+    response.data &&
+    typeof response.data === "object"
+  ) {
+    return response.data;
+  }
+
+  return response as UnreadNewsCountData;
+}
 
 // ---- Private helpers ----
 
@@ -1351,6 +1375,84 @@ export async function markNewsAsRead(
   }
 }
 
+function normalizeMenuName(menuName: unknown): string[] {
+  if (!menuName) return [];
+  if (Array.isArray(menuName)) {
+    return menuName.flatMap((item) => normalizeMenuName(item));
+  }
+  if (typeof menuName === "string" && menuName.trim() !== "") {
+    return [menuName];
+  }
+  return [];
+}
+
+function mapAnnouncementToUnreadNewsItem(
+  item: NLobbyAnnouncement,
+  forceUnread = false,
+): UnreadNewsItem {
+  const description =
+    item.content && !/^\$\d+$/.test(item.content.trim())
+      ? item.content
+      : undefined;
+
+  return {
+    id: item.id,
+    microCmsId: "",
+    menuName: normalizeMenuName(item.menuName),
+    title: item.title,
+    isImportant: Boolean(item.isImportant),
+    isByMentor: Boolean(item.isByMentor),
+    isRead: forceUnread ? false : !item.isUnread,
+    publishedAt: item.publishedAt.toISOString(),
+    updatedAt: item.publishedAt.toISOString(),
+    description,
+  };
+}
+
+function buildUnreadNewsFromCountFallback(
+  countData: UnreadNewsCountData,
+  newsItems: NLobbyAnnouncement[],
+): UnreadNewsInfo {
+  const topIds = (countData.topUnreadNewsIds ?? []).map(String);
+  const newsById = new Map(newsItems.map((item) => [item.id, item]));
+
+  const unreadNews: UnreadNewsItem[] = [];
+
+  for (const id of topIds) {
+    const item = newsById.get(id);
+    if (item) {
+      unreadNews.push(mapAnnouncementToUnreadNewsItem(item, true));
+      continue;
+    }
+
+    unreadNews.push({
+      id,
+      microCmsId: "",
+      menuName: [],
+      title: `News #${id}`,
+      isImportant: false,
+      isByMentor: false,
+      isRead: false,
+      publishedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  if (unreadNews.length === 0) {
+    for (const item of newsItems.filter((entry) => entry.isUnread)) {
+      unreadNews.push(mapAnnouncementToUnreadNewsItem(item));
+    }
+  }
+
+  return {
+    totalCount: countData.totalCount ?? unreadNews.length,
+    byMentorNewsCount: countData.byMentorNewsCount ?? 0,
+    hasImportantNews:
+      countData.hasImportantNews ?? unreadNews.some((item) => item.isImportant),
+    unreadNews,
+  };
+}
+
 export async function getUnreadNewsInfo(
   ctx: ApiContext,
 ): Promise<UnreadNewsInfo> {
@@ -1361,9 +1463,26 @@ export async function getUnreadNewsInfo(
     );
     logger.info("[SUCCESS] getUnreadNewsInfo succeeded");
     return result;
-  } catch (error) {
-    logger.error("[ERROR] getUnreadNewsInfo failed:", error);
-    throw error;
+  } catch (primaryError) {
+    logger.warn(
+      "[WARNING] getUnreadNewsInfo unavailable, falling back to getUnreadNewsCount + news list",
+    );
+    try {
+      const countData = unwrapUnreadNewsCountData(
+        await ctx.trpcClient.call<
+          UnreadNewsCountData | { data: UnreadNewsCountData }
+        >("news.getUnreadNewsCount"),
+      );
+      const newsItems = await getNews(ctx);
+      const result = buildUnreadNewsFromCountFallback(countData, newsItems);
+      logger.info(
+        `[SUCCESS] getUnreadNewsInfo fallback succeeded (${result.totalCount} unread)`,
+      );
+      return result;
+    } catch (fallbackError) {
+      logger.error("[ERROR] getUnreadNewsInfo fallback failed:", fallbackError);
+      throw primaryError;
+    }
   }
 }
 

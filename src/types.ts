@@ -213,6 +213,8 @@ export interface CourseReportDetail {
   progress: number;
   score: number | null;
   expiration: string;
+  name?: string;
+  type?: string;
 }
 
 export interface CourseReport {

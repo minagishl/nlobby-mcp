@@ -1,4 +1,5 @@
 import type { ApiContext } from "./context.js";
+import { CONFIG } from "../config.js";
 import { logger } from "../logger.js";
 import type {
   NLobbyRequiredCourse,
@@ -154,29 +155,97 @@ export async function getRequiredCourses(
   }
 }
 
+function courseMatchesSubjectFilter(
+  course: NLobbyRequiredCourse,
+  subject: string,
+): boolean {
+  const needle = subject.toLowerCase();
+  return (
+    course.subjectName.toLowerCase().includes(needle) ||
+    course.curriculumName.toLowerCase().includes(needle) ||
+    course.subjectCode.toLowerCase().includes(needle)
+  );
+}
+
+function deriveLearningResourcesFromCourses(
+  courses: NLobbyRequiredCourse[],
+  subject?: string,
+): NLobbyLearningResource[] {
+  const resources: NLobbyLearningResource[] = [];
+
+  for (const course of courses) {
+    if (subject && !courseMatchesSubjectFilter(course, subject)) {
+      continue;
+    }
+
+    const test = course.test as { makeupExamUrl?: string | null } | undefined;
+    const makeupUrl = test?.makeupExamUrl;
+    if (makeupUrl) {
+      resources.push({
+        id: `${course.subjectCode}-makeup-exam`,
+        title: `${course.subjectName} 追試`,
+        description: `${course.curriculumName}の追試提出フォーム`,
+        type: "assignment",
+        url: makeupUrl,
+        subject: course.subjectName,
+        grade: course.grade,
+        publishedAt: new Date(),
+      });
+    }
+
+    for (const detail of course.reportDetails ?? []) {
+      if (detail.progress >= 100) {
+        continue;
+      }
+
+      resources.push({
+        id: `${course.subjectCode}-report-${detail.number}`,
+        title:
+          detail.name ?? `${course.subjectName} レポート第${detail.number}回`,
+        description: `レポート進捗 ${detail.progress}%（期限: ${new Date(detail.expiration).toLocaleDateString("ja-JP")}）`,
+        type: detail.type === "report" ? "document" : "quiz",
+        url: `${CONFIG.nlobby.baseUrl}/required/`,
+        subject: course.subjectName,
+        grade: course.grade,
+        publishedAt: new Date(detail.expiration),
+      });
+    }
+  }
+
+  return resources;
+}
+
 export async function getLearningResources(
   ctx: ApiContext,
   subject?: string,
 ): Promise<NLobbyLearningResource[]> {
+  logger.info("[INFO] Fetching learning resources...");
+
   try {
     const params = subject ? { subject } : {};
     const response = await ctx.httpClient.get<
       NLobbyApiResponse<NLobbyLearningResource[]>
     >("/api/learning-resources", { params });
 
-    if (!response.data.success) {
-      throw new Error(
-        response.data.error || "Failed to fetch learning resources",
+    if (response.data.success && response.data.data) {
+      logger.info(
+        `[SUCCESS] Fetched ${response.data.data.length} learning resources from REST API`,
       );
+      return response.data.data;
     }
-
-    return response.data.data || [];
   } catch (error) {
-    logger.error("Error fetching learning resources:", error);
-    throw new Error(
-      "Authentication required. Please use the set_cookies tool to provide valid NextAuth.js session cookies from N Lobby.",
+    logger.warn(
+      "[WARNING] /api/learning-resources unavailable, deriving from required courses",
+      error instanceof Error ? error.message : error,
     );
   }
+
+  const courses = await getRequiredCourses(ctx);
+  const resources = deriveLearningResourcesFromCourses(courses, subject);
+  logger.info(
+    `[SUCCESS] Derived ${resources.length} learning resources from required courses`,
+  );
+  return resources;
 }
 
 export async function isExamDay(
