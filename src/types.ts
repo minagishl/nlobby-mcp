@@ -559,3 +559,65 @@ export interface LobbyCalendarFilter {
   label: string;
   color: string;
 }
+
+export interface SchoolingSession {
+  entryId?: string;
+  subjectName?: string;
+  subjectCode?: string;
+  date?: string;
+  time?: string;
+  location?: string;
+  status?: string;
+  attendanceStatus?: string;
+  sessionNumber?: string;
+  notes?: string;
+  detailUrl?: string;
+  rawText?: string;
+}
+
+export interface SchoolingDetailField {
+  label: string;
+  value: string;
+}
+
+export interface SchoolingScheduleRow {
+  cells: string[];
+}
+
+export interface SchoolingAttachment {
+  fileId: string;
+  fileName: string;
+}
+
+export interface SchoolingEntryDetail {
+  entryId: string;
+  studentNo: string;
+  secureHost: string;
+  callbackUrl: string;
+  targetUrl: string;
+  finalUrl: string;
+  detailUrl: string;
+  title?: string;
+  status?: string;
+  fields: SchoolingDetailField[];
+  description?: string;
+  attachments?: SchoolingAttachment[];
+  scheduleRows?: SchoolingScheduleRow[];
+}
+
+export interface SchoolingSummary {
+  necessaryCount?: number;
+  attendanceCount?: number;
+  entryCount?: number;
+  remainingCount?: number;
+}
+
+export interface SchoolingPageData {
+  studentNo: string;
+  secureHost: string;
+  callbackUrl: string;
+  targetUrl: string;
+  finalUrl: string;
+  sessions: SchoolingSession[];
+  summary?: SchoolingSummary;
+}

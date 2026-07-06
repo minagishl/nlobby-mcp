@@ -45,6 +45,12 @@ const BUILT_IN_FEATURES: FeatureMapping[] = [
     description: "Menus, notifications, and interest tags",
   },
   {
+    siteFeature: "スクーリング一覧",
+    cliCommand: "nlobby schooling",
+    description:
+      "Schooling schedule from secure portal (/mypage/schooling/top)",
+  },
+  {
     siteFeature: "任意ページ",
     cliCommand: "nlobby page <path>",
     description: "Fetch authenticated page content by URL path",

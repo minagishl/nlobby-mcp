@@ -1,12 +1,13 @@
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-import puppeteer, { type Browser, type CookieParam } from "puppeteer";
 import type { ApiContext } from "./context.js";
 import { fetchRenderedHtml } from "./shared.js";
-import { CONFIG } from "../config.js";
 import { logger } from "../logger.js";
 import type { NLobbyAccountInfo, StandardApiResponse } from "../types.js";
+import {
+  buildPuppeteerCookies,
+  buildSecurePortalCallbackUrl,
+  captureSecurePortalElement,
+  resolveSecureHostFromStudentNo,
+} from "./secure-portal.js";
 
 type UnknownObject = Record<string, unknown>;
 
@@ -200,184 +201,6 @@ function buildAccountInfoFromSession(
   };
 }
 
-function resolveSecureHostFromStudentNo(studentNo: string): string {
-  const identifier = studentNo.charAt(2)?.toUpperCase();
-  if (!identifier) {
-    return "secure.nnn.ed.jp";
-  }
-
-  if (identifier === "N") {
-    return "secure.nnn.ed.jp";
-  }
-
-  if (!/[A-Z]/.test(identifier)) {
-    return "secure.nnn.ed.jp";
-  }
-
-  return `${identifier.toLowerCase()}-secure.nnn.ed.jp`;
-}
-
-function buildPuppeteerCookies(
-  cookieHeader: string,
-  domain: string,
-): CookieParam[] {
-  const cookies: CookieParam[] = [];
-
-  for (const rawPart of cookieHeader.split(";")) {
-    const part = rawPart.trim();
-    if (!part) continue;
-
-    const separatorIndex = part.indexOf("=");
-    if (separatorIndex <= 0) continue;
-
-    const name = part.slice(0, separatorIndex);
-    const value = part.slice(separatorIndex + 1);
-
-    cookies.push({
-      name,
-      value,
-      domain,
-      path: "/",
-      secure: true,
-      httpOnly:
-        name.startsWith("__Secure-") ||
-        name.startsWith("__Host-") ||
-        name.toLowerCase().includes("session"),
-      sameSite: "Lax",
-    });
-  }
-
-  return cookies;
-}
-
-async function launchBrowser(): Promise<Browser> {
-  const launchArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
-  const executableCandidates = [
-    process.env.PUPPETEER_EXECUTABLE_PATH,
-    process.env.CHROME_PATH,
-  ].filter((value): value is string => !!value && value.trim().length > 0);
-
-  for (const candidate of executableCandidates) {
-    try {
-      return await puppeteer.launch({
-        headless: true,
-        executablePath: candidate,
-        args: launchArgs,
-      });
-    } catch {
-      // try next candidate
-    }
-  }
-
-  const launchErrors: Error[] = [];
-
-  const tryLaunch = async (
-    options: Parameters<typeof puppeteer.launch>[0],
-    description: string,
-  ): Promise<Browser | null> => {
-    try {
-      logger.info(`[STUDENT_CARD] Trying browser launch via ${description}`);
-      return await puppeteer.launch(options);
-    } catch (error) {
-      if (error instanceof Error) {
-        launchErrors.push(error);
-      }
-      return null;
-    }
-  };
-
-  const defaultBrowser = await tryLaunch(
-    { headless: true, args: launchArgs },
-    "default Puppeteer bundle",
-  );
-  if (defaultBrowser) {
-    return defaultBrowser;
-  }
-
-  const channelBrowser = await tryLaunch(
-    { headless: true, channel: "chrome", args: launchArgs },
-    "system Chrome channel",
-  );
-  if (channelBrowser) {
-    return channelBrowser;
-  }
-
-  const combinedMessage = launchErrors.map((error) => error.message).join("\n");
-  throw new Error(
-    `Failed to launch a browser instance for screenshot capture. ` +
-      `Please install Chrome via "npx puppeteer browsers install chrome".\n${combinedMessage}`,
-  );
-}
-
-async function captureElementScreenshot(options: {
-  startUrl: string;
-  waitForSelector: string;
-  screenshotName: string;
-  cookies: CookieParam[];
-}): Promise<{
-  base64: string;
-  path: string;
-  finalUrl: string;
-  elementSize?: { width: number; height: number };
-}> {
-  logger.info(
-    `[STUDENT_CARD] Launching headless browser for student card capture`,
-  );
-
-  const browser = await launchBrowser();
-
-  try {
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 720 });
-    await page.setUserAgent(CONFIG.userAgent);
-
-    if (options.cookies.length > 0) {
-      await page.setCookie(...options.cookies);
-    }
-
-    await page.goto(options.startUrl, {
-      waitUntil: "networkidle2",
-      timeout: 60000,
-    });
-
-    await page.waitForSelector(options.waitForSelector, { timeout: 60000 });
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const elementHandle = await page.$(options.waitForSelector);
-    if (!elementHandle) {
-      throw new Error(
-        `Failed to locate element ${options.waitForSelector} for screenshot`,
-      );
-    }
-
-    const buffer = (await elementHandle.screenshot({
-      type: "png",
-    })) as Buffer;
-
-    const tmpDir = path.join(os.tmpdir(), "nlobby-student-card");
-    await fs.mkdir(tmpDir, { recursive: true });
-    const screenshotPath = path.join(tmpDir, options.screenshotName);
-    await fs.writeFile(screenshotPath, buffer);
-
-    const boundingBox = await elementHandle.boundingBox();
-    const elementSize = boundingBox
-      ? {
-          width: Math.round(boundingBox.width),
-          height: Math.round(boundingBox.height),
-        }
-      : undefined;
-
-    return {
-      base64: buffer.toString("base64"),
-      path: screenshotPath,
-      finalUrl: page.url(),
-      elementSize,
-    };
-  } finally {
-    await browser.close();
-  }
-}
-
 // ---- Public module functions ----
 
 export async function getUserInfo(ctx: ApiContext): Promise<unknown> {
@@ -490,8 +313,10 @@ export async function getStudentCardScreenshot(ctx: ApiContext): Promise<{
   }
 
   const secureHost = resolveSecureHostFromStudentNo(studentNo);
-  const targetUrl = `https://${secureHost}/mypage/student_card/index`;
-  const callbackUrl = `https://nlobby.nnn.ed.jp/mypage/v1/callback?redirect_uri=${encodeURIComponent(targetUrl)}`;
+  const { callbackUrl } = buildSecurePortalCallbackUrl(
+    secureHost,
+    "/mypage/student_card/index",
+  );
 
   const cookieHeader = ctx.httpClient.defaults.headers["Cookie"];
 
@@ -508,7 +333,7 @@ export async function getStudentCardScreenshot(ctx: ApiContext): Promise<{
     );
   }
 
-  const screenshotResult = await captureElementScreenshot({
+  const screenshotResult = await captureSecurePortalElement({
     startUrl: callbackUrl,
     waitForSelector: "#main",
     screenshotName: `student-card-${Date.now()}.png`,

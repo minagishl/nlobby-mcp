@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mentor news support: `getNews({ tab: "mentor" })` fetches `/news?tab=mentor` for mentor announcements.
 - `nlobby news --tab mentor` and `nlobby news mentor` CLI commands.
 - MCP `get_news` `tab` parameter (`all` or `mentor`).
+- `nlobby schooling` — fetch schooling schedule from secure portal (`/mypage/schooling/top`) via N Lobby callback redirect.
+- MCP `get_schooling` tool with optional `html_only` for raw page content.
+
+### Fixed
+
+- Schooling parser now supports the secure portal card layout (title, period, location, status pill) in addition to table-based layouts.
+- `nlobby schooling show <entryId>` and MCP `get_schooling_detail` for application details (申し込み内容).
 
 ## [1.5.0] - 2026-07-07
 

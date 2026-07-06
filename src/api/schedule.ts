@@ -1,5 +1,4 @@
 import type { ApiContext } from "./context.js";
-import { CONFIG } from "../config.js";
 import { logger } from "../logger.js";
 import { HttpClientError } from "../http-client.js";
 import type {

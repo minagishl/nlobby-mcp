@@ -247,6 +247,43 @@ export class NLobbyMCPServer {
             },
           },
           {
+            name: "get_schooling",
+            description:
+              "Fetch schooling schedule from the secure student portal (/mypage/schooling/top)",
+            inputSchema: {
+              type: "object",
+              properties: {
+                html_only: {
+                  type: "boolean",
+                  description:
+                    "Return raw #main HTML instead of parsed schooling data (optional, default: false)",
+                  default: false,
+                },
+              },
+            },
+          },
+          {
+            name: "get_schooling_detail",
+            description:
+              "Fetch schooling application details (申し込み内容) by entry ID from the secure portal",
+            inputSchema: {
+              type: "object",
+              properties: {
+                entry_id: {
+                  type: "string",
+                  description: "Schooling entry ID (entryId query parameter)",
+                },
+                html_only: {
+                  type: "boolean",
+                  description:
+                    "Return raw #main HTML instead of parsed detail data (optional, default: false)",
+                  default: false,
+                },
+              },
+              required: ["entry_id"],
+            },
+          },
+          {
             name: "get_required_courses",
             description:
               "Retrieve required courses information with detailed progress tracking",
@@ -780,6 +817,81 @@ export class NLobbyMCPServer {
                   {
                     type: "text",
                     text: `Error capturing student card screenshot: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "get_schooling":
+            try {
+              const { html_only = false } = args as { html_only?: boolean };
+              if (html_only) {
+                const html = await this.api.getSchoolingPageHtml();
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: html,
+                    },
+                  ],
+                };
+              }
+
+              const schooling = await this.api.getSchooling();
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(schooling, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error fetching schooling page: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  },
+                ],
+              };
+            }
+
+          case "get_schooling_detail":
+            try {
+              const { entry_id, html_only = false } = args as {
+                entry_id: string;
+                html_only?: boolean;
+              };
+
+              if (html_only) {
+                const html =
+                  await this.api.getSchoolingDetailPageHtml(entry_id);
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: html,
+                    },
+                  ],
+                };
+              }
+
+              const detail = await this.api.getSchoolingDetail(entry_id);
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(detail, null, 2),
+                  },
+                ],
+              };
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: `Error fetching schooling detail: ${error instanceof Error ? error.message : "Unknown error"}`,
                   },
                 ],
               };

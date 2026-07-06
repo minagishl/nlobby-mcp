@@ -18,6 +18,7 @@ import { buildExamCommand } from "./commands/exam.js";
 import { buildNavigationCommand } from "./commands/navigation.js";
 import { buildDiscoverCommand } from "./commands/discover.js";
 import { buildPageCommand } from "./commands/page.js";
+import { buildSchoolingCommand } from "./commands/schooling.js";
 
 export function buildProgram(): Command {
   const api = new NLobbyApi();
@@ -40,6 +41,7 @@ export function buildProgram(): Command {
   program.addCommand(buildNavigationCommand(api));
   program.addCommand(buildDiscoverCommand(api));
   program.addCommand(buildPageCommand(api));
+  program.addCommand(buildSchoolingCommand(api));
   program.addCommand(buildServeCommand());
 
   return program;

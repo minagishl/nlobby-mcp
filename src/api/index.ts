@@ -33,6 +33,12 @@ import {
   getExamOneTimePassword as _getExamOneTimePassword,
 } from "./courses.js";
 import {
+  getSchooling as _getSchooling,
+  getSchoolingPageHtml as _getSchoolingPageHtml,
+  getSchoolingDetail as _getSchoolingDetail,
+  getSchoolingDetailPageHtml as _getSchoolingDetailPageHtml,
+} from "./schooling.js";
+import {
   getUserInfo as _getUserInfo,
   getAccountInfoFromScript as _getAccountInfoFromScript,
   getStudentCardScreenshot as _getStudentCardScreenshot,
@@ -68,6 +74,8 @@ import type {
   UserInterest,
   InterestWeight,
   LobbyCalendarFilter,
+  SchoolingPageData,
+  SchoolingEntryDetail,
 } from "../types.js";
 import type { NewsListOptions } from "./news.js";
 
@@ -339,6 +347,23 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
   async updateLastAccess(): Promise<boolean> {
     return _updateLastAccess(this);
+  }
+
+  // ---- Schooling ----
+  async getSchooling(): Promise<SchoolingPageData> {
+    return _getSchooling(this);
+  }
+
+  async getSchoolingPageHtml(): Promise<string> {
+    return _getSchoolingPageHtml(this);
+  }
+
+  async getSchoolingDetail(entryId: string): Promise<SchoolingEntryDetail> {
+    return _getSchoolingDetail(this, entryId);
+  }
+
+  async getSchoolingDetailPageHtml(entryId: string): Promise<string> {
+    return _getSchoolingDetailPageHtml(this, entryId);
   }
 
   // ---- Navigation ----
