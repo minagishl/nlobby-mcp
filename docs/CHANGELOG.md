@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Mentor news support: `getNews({ tab: "mentor" })` fetches `/news?tab=mentor` for mentor announcements.
+- `nlobby news --tab mentor` and `nlobby news mentor` CLI commands.
+- MCP `get_news` `tab` parameter (`all` or `mentor`).
+
 ## [1.5.0] - 2026-07-07
 
 ### Added

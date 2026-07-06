@@ -1,83 +1,129 @@
 import { Command } from "commander";
 import { NLobbyApi } from "../../api/index.js";
+import type { NewsTab } from "../../api/news.js";
 import { formatNews, formatNewsDetail } from "../formatters/news.js";
+
+async function listNews(
+  api: NLobbyApi,
+  opts: {
+    limit: string;
+    category?: string;
+    sort: string;
+    unread?: boolean;
+    tab?: NewsTab;
+    json?: boolean;
+  },
+): Promise<void> {
+  let items = await api.getNews({ tab: opts.tab });
+
+  if (opts.unread) {
+    items = items.filter((i) => i.isUnread);
+  }
+
+  if (opts.category) {
+    const cat = opts.category.toLowerCase();
+    items = items.filter(
+      (i) =>
+        i.category.toLowerCase().includes(cat) ||
+        (i.menuName ?? "").toLowerCase().includes(cat),
+    );
+  }
+
+  switch (opts.sort) {
+    case "oldest":
+      items.sort(
+        (a, b) =>
+          new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime(),
+      );
+      break;
+    case "title-asc":
+      items.sort((a, b) => a.title.localeCompare(b.title));
+      break;
+    case "title-desc":
+      items.sort((a, b) => b.title.localeCompare(a.title));
+      break;
+    default:
+      items.sort(
+        (a, b) =>
+          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+      );
+  }
+
+  const limit = parseInt(opts.limit, 10);
+  items = items.slice(0, limit);
+
+  if (opts.json) {
+    console.log(JSON.stringify(items, null, 2));
+  } else {
+    console.log(formatNews(items));
+  }
+}
 
 export function buildNewsCommand(api: NLobbyApi): Command {
   const news = new Command("news").description("N Lobby news");
 
+  const listOptions = (command: Command): void => {
+    command
+      .option("--limit <n>", "Number of items to show", "10")
+      .option("--category <cat>", "Filter by category")
+      .option(
+        "--sort <order>",
+        "Sort order: newest|oldest|title-asc|title-desc",
+        "newest",
+      )
+      .option("--unread", "Show only unread items")
+      .option("--json", "Output raw JSON");
+  };
+
   // Default action: list news
-  news
+  const list = news
     .command("list", { isDefault: true })
     .description("List news")
-    .option("--limit <n>", "Number of items to show", "10")
-    .option("--category <cat>", "Filter by category")
-    .option(
-      "--sort <order>",
-      "Sort order: newest|oldest|title-asc|title-desc",
-      "newest",
-    )
-    .option("--unread", "Show only unread items")
-    .option("--json", "Output raw JSON")
-    .action(
-      async (opts: {
-        limit: string;
-        category?: string;
-        sort: string;
-        unread?: boolean;
-        json?: boolean;
-      }) => {
-        try {
-          let items = await api.getNews();
+    .option("--tab <tab>", "News tab: all|mentor (default: all)", "all");
 
-          if (opts.unread) {
-            items = items.filter((i) => i.isUnread);
-          }
+  listOptions(list);
 
-          if (opts.category) {
-            const cat = opts.category.toLowerCase();
-            items = items.filter(
-              (i) =>
-                i.category.toLowerCase().includes(cat) ||
-                (i.menuName ?? "").toLowerCase().includes(cat),
-            );
-          }
+  list.action(
+    async (opts: {
+      limit: string;
+      category?: string;
+      sort: string;
+      unread?: boolean;
+      tab: string;
+      json?: boolean;
+    }) => {
+      try {
+        const tab = opts.tab === "mentor" ? "mentor" : "all";
+        await listNews(api, { ...opts, tab });
+      } catch (err) {
+        console.error("[FAIL]", err instanceof Error ? err.message : err);
+        process.exit(1);
+      }
+    },
+  );
 
-          switch (opts.sort) {
-            case "oldest":
-              items.sort(
-                (a, b) =>
-                  new Date(a.publishedAt).getTime() -
-                  new Date(b.publishedAt).getTime(),
-              );
-              break;
-            case "title-asc":
-              items.sort((a, b) => a.title.localeCompare(b.title));
-              break;
-            case "title-desc":
-              items.sort((a, b) => b.title.localeCompare(a.title));
-              break;
-            default:
-              items.sort(
-                (a, b) =>
-                  new Date(b.publishedAt).getTime() -
-                  new Date(a.publishedAt).getTime(),
-              );
-          }
+  const mentor = news
+    .command("mentor")
+    .description("List mentor news (same as /news?tab=mentor)");
 
-          const limit = parseInt(opts.limit, 10);
-          items = items.slice(0, limit);
+  listOptions(mentor);
 
-          if (opts.json) {
-            console.log(JSON.stringify(items, null, 2));
-          } else {
-            console.log(formatNews(items));
-          }
-        } catch (err) {
-          console.error("[FAIL]", err instanceof Error ? err.message : err);
-          process.exit(1);
-        }
-      },
-    );
+  mentor.action(
+    async (opts: {
+      limit: string;
+      category?: string;
+      sort: string;
+      unread?: boolean;
+      json?: boolean;
+    }) => {
+      try {
+        await listNews(api, { ...opts, tab: "mentor" });
+      } catch (err) {
+        console.error("[FAIL]", err instanceof Error ? err.message : err);
+        process.exit(1);
+      }
+    },
+  );
 
   news
     .command("show <id>")

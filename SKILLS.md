@@ -15,13 +15,14 @@
 
 ### News
 
-| Command                     | Options / Arguments                                                                                 | Description                                                         |
-| --------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `nlobby news`               | `--limit <n>` `--category <cat>` `--sort newest\|oldest\|title-asc\|title-desc` `--unread` `--json` | List news (default: 10, newest)                                     |
-| `nlobby news show <id>`     | `--mark-read` `--json`                                                                              | Show news article detail                                            |
-| `nlobby news download <id>` | `--index <n>` `--output-dir <dir>`                                                                  | Download one attachment (1-based index; uses authenticated session) |
-| `nlobby news read <ids…>`   |                                                                                                     | Mark one or more articles as read                                   |
-| `nlobby news unread-info`   | `--json`                                                                                            | Show unread count and flags                                         |
+| Command                     | Options / Arguments                                                                                                     | Description                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `nlobby news`               | `--limit <n>` `--category <cat>` `--tab all\|mentor` `--sort newest\|oldest\|title-asc\|title-desc` `--unread` `--json` | List news (default: 10, newest)                                     |
+| `nlobby news mentor`        | same as `news list` without `--tab`                                                                                     | List mentor announcements (`/news?tab=mentor`)                      |
+| `nlobby news show <id>`     | `--mark-read` `--json`                                                                                                  | Show news article detail                                            |
+| `nlobby news download <id>` | `--index <n>` `--output-dir <dir>`                                                                                      | Download one attachment (1-based index; uses authenticated session) |
+| `nlobby news read <ids…>`   |                                                                                                                         | Mark one or more articles as read                                   |
+| `nlobby news unread-info`   | `--json`                                                                                                                | Show unread count and flags                                         |
 
 ### Schedule & Calendar
 
@@ -88,7 +89,7 @@
 
 | Tool                          | Parameters                                         | Description                             |
 | ----------------------------- | -------------------------------------------------- | --------------------------------------- |
-| `get_news`                    | `category?` `limit?` `sort?`                       | Retrieve school news                    |
+| `get_news`                    | `category?` `limit?` `sort?` `tab?`                | Retrieve school news                    |
 | `get_news_detail`             | `newsId` `markAsRead?`                             | Get full detail of a news article       |
 | `mark_news_as_read`           | `ids` (array)                                      | Mark news articles as read              |
 | `get_unread_news_info`        |                                                    | Unread news count and important flags   |

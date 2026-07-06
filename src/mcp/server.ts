@@ -197,6 +197,13 @@ export class NLobbyMCPServer {
                     "Sort order: 'newest' (default), 'oldest', 'title-asc', 'title-desc'",
                   enum: ["newest", "oldest", "title-asc", "title-desc"],
                 },
+                tab: {
+                  type: "string",
+                  description:
+                    "News tab: 'all' (default) or 'mentor' for mentor announcements",
+                  enum: ["all", "mentor"],
+                  default: "all",
+                },
               },
             },
           },
@@ -612,12 +619,16 @@ export class NLobbyMCPServer {
                 category,
                 limit = 10,
                 sort = "newest",
+                tab = "all",
               } = args as {
                 category?: string;
                 limit?: number;
                 sort?: "newest" | "oldest" | "title-asc" | "title-desc";
+                tab?: "all" | "mentor";
               };
-              const news = await this.api.getNews();
+              const news = await this.api.getNews({
+                tab: tab === "mentor" ? "mentor" : "all",
+              });
               let filteredNews = category
                 ? news.filter((n) => n.category === category)
                 : news;

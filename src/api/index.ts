@@ -69,6 +69,7 @@ import type {
   InterestWeight,
   LobbyCalendarFilter,
 } from "../types.js";
+import type { NewsListOptions } from "./news.js";
 
 const SESSION_FILE = path.join(os.homedir(), ".nlobby", "session");
 
@@ -217,8 +218,8 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
   }
 
   // ---- News ----
-  async getNews(): Promise<NLobbyAnnouncement[]> {
-    return getNews(this);
+  async getNews(options?: NewsListOptions): Promise<NLobbyAnnouncement[]> {
+    return getNews(this, options);
   }
 
   async getNewsDetail(newsId: string): Promise<NLobbyNewsDetail> {

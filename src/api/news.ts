@@ -333,6 +333,7 @@ function transformNewsToAnnouncements(
       menuName: newsItem.menuName,
       isImportant: Boolean(newsItem.isImportant),
       isUnread: Boolean(newsItem.isUnread),
+      isByMentor: Boolean(newsItem.isByMentor),
       ...Object.fromEntries(
         Object.entries(newsItem).filter(
           ([key]) =>
@@ -1253,13 +1254,29 @@ function parseNewsDetailFromRawHtml(
 
 // ---- Public module functions ----
 
-export async function getNews(ctx: ApiContext): Promise<NLobbyAnnouncement[]> {
-  logger.info("[INFO] Starting getNews with HTTP client...");
+export type NewsTab = "all" | "mentor";
+
+export interface NewsListOptions {
+  tab?: NewsTab;
+}
+
+export async function getNews(
+  ctx: ApiContext,
+  options: NewsListOptions = {},
+): Promise<NLobbyAnnouncement[]> {
+  const tab = options.tab ?? "all";
+  const path = tab === "mentor" ? "/news?tab=mentor" : "/news";
+
+  logger.info(`[INFO] Starting getNews with HTTP client (tab=${tab})...`);
   logger.info("[STATUS] Current authentication status:", ctx.getCookieStatus());
 
   try {
-    const html = await fetchRenderedHtml(ctx, "/news");
-    const news = parseNewsFromHtml(html);
+    const html = await fetchRenderedHtml(ctx, path);
+    let news = parseNewsFromHtml(html);
+
+    if (tab === "mentor") {
+      news = news.map((item) => ({ ...item, isByMentor: true }));
+    }
 
     if (news && news.length > 0) {
       logger.info(`[SUCCESS] Retrieved ${news.length} news items from HTML`);

@@ -45,6 +45,7 @@ export interface NLobbyAnnouncement {
   menuName?: string;
   isImportant?: boolean;
   isUnread?: boolean;
+  isByMentor?: boolean;
   url?: string;
 }
 

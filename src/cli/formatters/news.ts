@@ -10,7 +10,8 @@ export function formatNews(items: NLobbyAnnouncement[]): string {
     const date = new Date(item.publishedAt).toLocaleDateString("ja-JP");
     const unread = item.isUnread ? " [UNREAD]" : "";
     const important = item.isImportant ? " [!]" : "";
-    lines.push(`[${item.id}] ${date}${important}${unread}`);
+    const mentor = item.isByMentor ? " [MENTOR]" : "";
+    lines.push(`[${item.id}] ${date}${important}${mentor}${unread}`);
     lines.push(`  ${item.title}`);
     if (item.menuName) {
       lines.push(`  Category: ${item.menuName}`);
@@ -29,6 +30,7 @@ export function formatNewsDetail(detail: NLobbyNewsDetail): string {
   lines.push(`Date: ${date}`);
   lines.push(`Category: ${detail.menuName.join(", ")}`);
   if (detail.isImportant) lines.push("Important: Yes");
+  if (detail.isByMentor) lines.push("From mentor: Yes");
   lines.push(`URL: ${detail.url}`);
   lines.push("");
   lines.push("─".repeat(50));
