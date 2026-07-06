@@ -22,10 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Shared secure portal auth/fetch helpers (`resolveSecurePortalContext`) moved to `src/api/secure-portal.ts` for reuse across schooling and designated school.
 - MCP server split into feature modules under `src/mcp/tools/` and `src/mcp/resources/`; `server.ts` now registers tools via a central registry instead of inline JSON and switch cases.
+- Puppeteer browser launch logic consolidated in `src/auth/puppeteer-launch.ts` and shared by `login` and secure-portal scraping.
+- GitHub Actions publish workflow (`.github/workflows/publish.yml`) simplified.
 
 ### Fixed
 
 - Schooling parser now supports the secure portal card layout (title, period, location, status pill) in addition to table-based layouts.
+- `nlobby login` / `interactive_login`: fixed immediate browser launch failure when Puppeteer-bundled Chrome is not installed. Added shared `launchPuppeteerBrowser` helper with fallbacks to system Chrome (`channel: "chrome"`), `PUPPETEER_EXECUTABLE_PATH` / `CHROME_PATH`, and macOS Chrome; improved launch error messages.
+- `nlobby news unread-info` / `get_unread_news_info`: fallback to `news.getUnreadNewsCount` plus news list enrichment when `news.getUnreadNewsInfo` tRPC endpoint returns 404.
+- `nlobby courses resources` / `get_learning_resources`: fallback to deriving resources from `requiredCourse.getRequiredCourses` (makeup exam URLs and incomplete report items) when `/api/learning-resources` returns 404.
 
 ## [1.5.0] - 2026-07-07
 
