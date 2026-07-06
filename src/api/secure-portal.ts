@@ -1,4 +1,5 @@
-import puppeteer, { type Browser, type CookieParam } from "puppeteer";
+import type { Browser, CookieParam } from "puppeteer";
+import { launchPuppeteerBrowser } from "../auth/puppeteer-launch.js";
 import { CONFIG } from "../config.js";
 import { logger } from "../logger.js";
 import type { ApiContext } from "./context.js";
@@ -67,62 +68,10 @@ export function buildPuppeteerCookies(
 }
 
 export async function launchHeadlessBrowser(): Promise<Browser> {
-  const launchArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
-  const executableCandidates = [
-    process.env.PUPPETEER_EXECUTABLE_PATH,
-    process.env.CHROME_PATH,
-  ].filter((value): value is string => !!value && value.trim().length > 0);
-
-  for (const candidate of executableCandidates) {
-    try {
-      return await puppeteer.launch({
-        headless: true,
-        executablePath: candidate,
-        args: launchArgs,
-      });
-    } catch {
-      // try next candidate
-    }
-  }
-
-  const launchErrors: Error[] = [];
-
-  const tryLaunch = async (
-    options: Parameters<typeof puppeteer.launch>[0],
-    description: string,
-  ): Promise<Browser | null> => {
-    try {
-      logger.info(`[SECURE_PORTAL] Trying browser launch via ${description}`);
-      return await puppeteer.launch(options);
-    } catch (error) {
-      if (error instanceof Error) {
-        launchErrors.push(error);
-      }
-      return null;
-    }
-  };
-
-  const defaultBrowser = await tryLaunch(
-    { headless: true, args: launchArgs },
-    "default Puppeteer bundle",
-  );
-  if (defaultBrowser) {
-    return defaultBrowser;
-  }
-
-  const channelBrowser = await tryLaunch(
-    { headless: true, channel: "chrome", args: launchArgs },
-    "system Chrome channel",
-  );
-  if (channelBrowser) {
-    return channelBrowser;
-  }
-
-  const combinedMessage = launchErrors.map((error) => error.message).join("\n");
-  throw new Error(
-    `Failed to launch a browser instance for secure portal access. ` +
-      `Please install Chrome via "npx puppeteer browsers install chrome".\n${combinedMessage}`,
-  );
+  return launchPuppeteerBrowser({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
 }
 
 export async function resolveSecurePortalContext(

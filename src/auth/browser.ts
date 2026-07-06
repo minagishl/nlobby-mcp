@@ -1,4 +1,5 @@
-import puppeteer, { Browser, Page } from "puppeteer";
+import { Browser, Page } from "puppeteer";
+import { launchPuppeteerBrowser } from "./puppeteer-launch.js";
 import { CONFIG } from "../config.js";
 import { logger } from "../logger.js";
 
@@ -27,63 +28,23 @@ export class BrowserAuth {
         this.page = null;
       }
 
-      this.browser = await puppeteer.launch({
+      this.browser = await launchPuppeteerBrowser({
         headless: false,
         defaultViewport: {
           width: 1280,
           height: 800,
         },
-        ignoreDefaultArgs: ["--disable-extensions", "--disable-default-apps"],
         args: [
           "--no-sandbox",
           "--disable-setuid-sandbox",
           "--disable-dev-shm-usage",
-          "--disable-gpu",
           "--no-first-run",
           "--no-default-browser-check",
-          "--no-pings",
           "--password-store=basic",
           "--use-mock-keychain",
-          "--memory-pressure-off",
-          "--max_old_space_size=4096",
-          '--js-flags="--max-old-space-size=4096"',
-          "--disable-background-timer-throttling",
-          "--disable-renderer-backgrounding",
-          "--disable-backgrounding-occluded-windows",
-          "--disable-background-mode",
-          "--disable-default-apps",
-          "--disable-sync",
-          "--disable-translate",
-          "--disable-infobars",
-          "--disable-notifications",
-          "--disable-popup-blocking",
-          "--enable-async-dns",
-          "--enable-simple-cache-backend",
-          "--enable-tcp-fast-open",
-          "--prerender-from-omnibox=disabled",
-          "--disable-features=VizDisplayCompositor,TranslateUI",
-          "--disable-search-engine-choice-screen",
-          "--disable-component-update",
-          "--allow-running-insecure-content",
-          "--disable-hang-monitor",
-          "--disable-prompt-on-repost",
-          "--disable-client-side-phishing-detection",
-          "--disable-domain-reliability",
-          "--disable-logging",
-          "--disable-login-animations",
-          "--disable-modal-animations",
-          "--disable-motion-blur",
-          "--disable-smooth-scrolling",
-          "--disable-threaded-animation",
-          "--disable-threaded-scrolling",
-          "--disable-checker-imaging",
-          "--disable-new-profile-management",
-          "--disable-new-avatar-menu",
-          "--disable-new-bookmark-apps",
         ],
         timeout: 60000,
         protocolTimeout: 60000,
-        slowMo: 250,
       });
 
       this.page = await this.browser.newPage();
@@ -152,7 +113,8 @@ export class BrowserAuth {
 
       logger.info("Browser initialized successfully");
     } catch (error) {
-      logger.error("Failed to initialize browser:", error);
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error("Failed to initialize browser:", message);
 
       if (this.browser) {
         try {
@@ -164,7 +126,11 @@ export class BrowserAuth {
         this.page = null;
       }
 
-      throw new Error("Failed to initialize browser for authentication");
+      throw new Error(
+        message.includes("Failed to launch a browser instance")
+          ? message
+          : `Failed to initialize browser for authentication: ${message}`,
+      );
     }
   }
 
