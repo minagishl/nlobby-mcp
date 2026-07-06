@@ -621,3 +621,65 @@ export interface SchoolingPageData {
   sessions: SchoolingSession[];
   summary?: SchoolingSummary;
 }
+
+export interface DesignatedSchoolSearchOptions {
+  prefectures?: number[];
+  schoolTypes?: number[];
+  schoolName?: string;
+  schoolNameExact?: boolean;
+  facultyName?: string;
+  facultyNameExact?: boolean;
+  freeword?: string;
+  freewordExact?: boolean;
+  selectionDeadlineBefore?: string;
+  page?: number;
+}
+
+export interface DesignatedSchoolDocument {
+  title: string;
+  pdfUrl?: string;
+  disabled?: boolean;
+}
+
+export interface DesignatedSchoolIntroSection {
+  heading: string;
+  content: string;
+}
+
+export interface DesignatedSchoolIntro {
+  title?: string;
+  sections: DesignatedSchoolIntroSection[];
+  updates: string[];
+  documents: DesignatedSchoolDocument[];
+}
+
+export interface DesignatedSchoolEntry {
+  code: string;
+  schoolName: string;
+  course?: string;
+  schoolType?: string;
+  prefecture?: string;
+  quota?: string;
+  applicationType?: string;
+  selectionDeadline?: string;
+  applicationStartDate?: string;
+  applicationDeadline?: string;
+  note?: string;
+  pdfId?: string;
+  pdfUrl?: string;
+  badges: string[];
+}
+
+export interface DesignatedSchoolPageData {
+  studentNo: string;
+  secureHost: string;
+  callbackUrl: string;
+  targetUrl: string;
+  finalUrl: string;
+  intro?: DesignatedSchoolIntro;
+  totalCount?: number;
+  currentPage?: number;
+  totalPages?: number;
+  entries: DesignatedSchoolEntry[];
+  searchFormToken?: string;
+}

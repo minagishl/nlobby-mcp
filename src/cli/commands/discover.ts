@@ -51,6 +51,12 @@ const BUILT_IN_FEATURES: FeatureMapping[] = [
       "Schooling schedule from secure portal (/mypage/schooling/top)",
   },
   {
+    siteFeature: "指定校情報",
+    cliCommand: "nlobby designated-school",
+    description:
+      "Designated school recommendations from secure portal (/mypage/designated_school/index)",
+  },
+  {
     siteFeature: "任意ページ",
     cliCommand: "nlobby page <path>",
     description: "Fetch authenticated page content by URL path",

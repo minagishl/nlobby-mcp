@@ -14,11 +14,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MCP `get_news` `tab` parameter (`all` or `mentor`).
 - `nlobby schooling` — fetch schooling schedule from secure portal (`/mypage/schooling/top`) via N Lobby callback redirect.
 - MCP `get_schooling` tool with optional `html_only` for raw page content.
+- `nlobby schooling show <entryId>` and MCP `get_schooling_detail` for application details (申し込み内容).
+- `nlobby designated-school` — fetch designated school (指定校) recommendations from secure portal (`/mypage/designated_school/index`) with search and pagination filters.
+- MCP `get_designated_school` tool with optional `html_only` and search parameters (`page`, `prefectures`, `school_types`, `school_name`, `faculty_name`, `freeword`, `selection_deadline_before`).
+
+### Changed
+
+- Shared secure portal auth/fetch helpers (`resolveSecurePortalContext`) moved to `src/api/secure-portal.ts` for reuse across schooling and designated school.
 
 ### Fixed
 
 - Schooling parser now supports the secure portal card layout (title, period, location, status pill) in addition to table-based layouts.
-- `nlobby schooling show <entryId>` and MCP `get_schooling_detail` for application details (申し込み内容).
 
 ## [1.5.0] - 2026-07-07
 

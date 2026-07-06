@@ -39,6 +39,10 @@ import {
   getSchoolingDetailPageHtml as _getSchoolingDetailPageHtml,
 } from "./schooling.js";
 import {
+  getDesignatedSchool as _getDesignatedSchool,
+  getDesignatedSchoolPageHtml as _getDesignatedSchoolPageHtml,
+} from "./designated-school.js";
+import {
   getUserInfo as _getUserInfo,
   getAccountInfoFromScript as _getAccountInfoFromScript,
   getStudentCardScreenshot as _getStudentCardScreenshot,
@@ -76,6 +80,8 @@ import type {
   LobbyCalendarFilter,
   SchoolingPageData,
   SchoolingEntryDetail,
+  DesignatedSchoolPageData,
+  DesignatedSchoolSearchOptions,
 } from "../types.js";
 import type { NewsListOptions } from "./news.js";
 
@@ -364,6 +370,19 @@ ${!cookiesSynced && hasHttpCookies ? "[WARNING] Cookie length mismatch detected 
 
   async getSchoolingDetailPageHtml(entryId: string): Promise<string> {
     return _getSchoolingDetailPageHtml(this, entryId);
+  }
+
+  // ---- Designated school ----
+  async getDesignatedSchool(
+    options?: DesignatedSchoolSearchOptions,
+  ): Promise<DesignatedSchoolPageData> {
+    return _getDesignatedSchool(this, options);
+  }
+
+  async getDesignatedSchoolPageHtml(
+    options?: DesignatedSchoolSearchOptions,
+  ): Promise<string> {
+    return _getDesignatedSchoolPageHtml(this, options);
   }
 
   // ---- Navigation ----

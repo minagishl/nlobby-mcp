@@ -50,6 +50,14 @@
 | `nlobby schooling`           | `--json` `--html`   | List schooling entries from secure portal           |
 | `nlobby schooling show <id>` | `--json` `--html`   | Show application details (申し込み内容) by entry ID |
 
+### Designated School (指定校)
+
+| Command                    | Options / Arguments                                                                                                                                                                                                                  | Description                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `nlobby designated-school` | `--json` `--html` `--page <n>` `--prefecture <codes>` `--school-type <types>` `--school-name <name>` `--school-name-exact` `--faculty-name <name>` `--faculty-name-exact` `--freeword <text>` `--freeword-exact` `--deadline <date>` | List designated school slots from secure portal (`/mypage/designated_school/index`) |
+
+Search filters: `--prefecture` and `--school-type` accept comma-separated codes (e.g. `13` for Tokyo; `1`=university, `2`=junior college, `3`=vocational). `--deadline` accepts `YYYY/MM/DD` or `YYYY-MM-DD`.
+
 ### Discover & Pages
 
 | Command              | Options / Arguments     | Description                                     |
@@ -94,40 +102,41 @@
 
 ## MCP Tools
 
-| Tool                          | Parameters                                         | Description                                 |
-| ----------------------------- | -------------------------------------------------- | ------------------------------------------- |
-| `get_news`                    | `category?` `limit?` `sort?` `tab?`                | Retrieve school news                        |
-| `get_news_detail`             | `newsId` `markAsRead?`                             | Get full detail of a news article           |
-| `mark_news_as_read`           | `ids` (array)                                      | Mark news articles as read                  |
-| `get_unread_news_info`        |                                                    | Unread news count and important flags       |
-| `get_schedule`                | `date?`                                            | School schedule for a date (YYYY-MM-DD)     |
-| `get_calendar_events`         | `calendar_type?` `from_date?` `to_date?` `period?` | Calendar events (personal or school)        |
-| `test_calendar_endpoints`     | `from_date?` `to_date?`                            | Test both calendar endpoints                |
-| `get_calendar_filters`        |                                                    | Lobby calendar filter list                  |
-| `get_required_courses`        | `grade?` `semester?` `category?`                   | Required courses with progress tracking     |
-| `get_learning_resources`      | `subject?`                                         | Learning materials and study resources      |
-| `download_news_attachment`    | `newsId` `index?` `outputDir?`                     | Download a news article attachment          |
-| `check_exam_day`              | `date?`                                            | Check if date is an exam day                |
-| `finish_exam_day_mode`        |                                                    | Finish exam day mode                        |
-| `get_exam_otp`                |                                                    | Get one-time password for exam              |
-| `get_account_info`            |                                                    | Extract account info from Next.js page      |
-| `get_student_card_screenshot` |                                                    | Capture student ID card screenshot          |
-| `get_schooling`               | `html_only?`                                       | Fetch schooling schedule from secure portal |
-| `get_schooling_detail`        | `entry_id` `html_only?`                            | Fetch schooling application details         |
-| `update_last_access`          |                                                    | Update last access timestamp                |
-| `get_navigation_menus`        |                                                    | Main navigation menu list                   |
-| `get_notifications`           |                                                    | Notification messages                       |
-| `get_user_interests`          | `with_icon?`                                       | User interest tags                          |
-| `get_interest_weights`        |                                                    | Interest weight scale definitions           |
-| `set_cookies`                 | `cookies`                                          | Set authentication cookies                  |
-| `check_cookies`               |                                                    | Check authentication cookie status          |
-| `health_check`                |                                                    | Check API connectivity                      |
-| `debug_connection`            | `endpoint?`                                        | Debug connection with detailed info         |
-| `test_page_content`           | `endpoint?` `length?`                              | Retrieve and sample page content            |
-| `test_trpc_endpoint`          | `method` `params?`                                 | Test a tRPC endpoint directly               |
-| `verify_authentication`       |                                                    | Verify cookie sync across all clients       |
-| `interactive_login`           |                                                    | Open browser for manual login               |
-| `login_help`                  | `email?`                                           | Login help and troubleshooting              |
+| Tool                          | Parameters                                                                                                                                                                               | Description                                                         |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `get_news`                    | `category?` `limit?` `sort?` `tab?`                                                                                                                                                      | Retrieve school news                                                |
+| `get_news_detail`             | `newsId` `markAsRead?`                                                                                                                                                                   | Get full detail of a news article                                   |
+| `mark_news_as_read`           | `ids` (array)                                                                                                                                                                            | Mark news articles as read                                          |
+| `get_unread_news_info`        |                                                                                                                                                                                          | Unread news count and important flags                               |
+| `get_schedule`                | `date?`                                                                                                                                                                                  | School schedule for a date (YYYY-MM-DD)                             |
+| `get_calendar_events`         | `calendar_type?` `from_date?` `to_date?` `period?`                                                                                                                                       | Calendar events (personal or school)                                |
+| `test_calendar_endpoints`     | `from_date?` `to_date?`                                                                                                                                                                  | Test both calendar endpoints                                        |
+| `get_calendar_filters`        |                                                                                                                                                                                          | Lobby calendar filter list                                          |
+| `get_required_courses`        | `grade?` `semester?` `category?`                                                                                                                                                         | Required courses with progress tracking                             |
+| `get_learning_resources`      | `subject?`                                                                                                                                                                               | Learning materials and study resources                              |
+| `download_news_attachment`    | `newsId` `index?` `outputDir?`                                                                                                                                                           | Download a news article attachment                                  |
+| `check_exam_day`              | `date?`                                                                                                                                                                                  | Check if date is an exam day                                        |
+| `finish_exam_day_mode`        |                                                                                                                                                                                          | Finish exam day mode                                                |
+| `get_exam_otp`                |                                                                                                                                                                                          | Get one-time password for exam                                      |
+| `get_account_info`            |                                                                                                                                                                                          | Extract account info from Next.js page                              |
+| `get_student_card_screenshot` |                                                                                                                                                                                          | Capture student ID card screenshot                                  |
+| `get_schooling`               | `html_only?`                                                                                                                                                                             | Fetch schooling schedule from secure portal                         |
+| `get_schooling_detail`        | `entry_id` `html_only?`                                                                                                                                                                  | Fetch schooling application details                                 |
+| `get_designated_school`       | `html_only?` `page?` `prefectures?` `school_types?` `school_name?` `school_name_exact?` `faculty_name?` `faculty_name_exact?` `freeword?` `freeword_exact?` `selection_deadline_before?` | Fetch designated school (指定校) recommendations from secure portal |
+| `update_last_access`          |                                                                                                                                                                                          | Update last access timestamp                                        |
+| `get_navigation_menus`        |                                                                                                                                                                                          | Main navigation menu list                                           |
+| `get_notifications`           |                                                                                                                                                                                          | Notification messages                                               |
+| `get_user_interests`          | `with_icon?`                                                                                                                                                                             | User interest tags                                                  |
+| `get_interest_weights`        |                                                                                                                                                                                          | Interest weight scale definitions                                   |
+| `set_cookies`                 | `cookies`                                                                                                                                                                                | Set authentication cookies                                          |
+| `check_cookies`               |                                                                                                                                                                                          | Check authentication cookie status                                  |
+| `health_check`                |                                                                                                                                                                                          | Check API connectivity                                              |
+| `debug_connection`            | `endpoint?`                                                                                                                                                                              | Debug connection with detailed info                                 |
+| `test_page_content`           | `endpoint?` `length?`                                                                                                                                                                    | Retrieve and sample page content                                    |
+| `test_trpc_endpoint`          | `method` `params?`                                                                                                                                                                       | Test a tRPC endpoint directly                                       |
+| `verify_authentication`       |                                                                                                                                                                                          | Verify cookie sync across all clients                               |
+| `interactive_login`           |                                                                                                                                                                                          | Open browser for manual login                                       |
+| `login_help`                  | `email?`                                                                                                                                                                                 | Login help and troubleshooting                                      |
 
 ---
 

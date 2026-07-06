@@ -1,12 +1,9 @@
 import * as cheerio from "cheerio";
 import type { ApiContext } from "./context.js";
 import { logger } from "../logger.js";
-import { getAccountInfoFromScript } from "./account.js";
 import {
-  buildPuppeteerCookies,
-  buildSecurePortalCallbackUrl,
   fetchSecurePortalPage,
-  resolveSecureHostFromStudentNo,
+  resolveSecurePortalContext,
 } from "./secure-portal.js";
 import type {
   SchoolingPageData,
@@ -539,48 +536,6 @@ export function parseSchoolingHtml(html: string): {
   const summary = extractSchoolingSummary(html);
 
   return { sessions, summary };
-}
-
-async function resolveSecurePortalContext(
-  ctx: ApiContext,
-  portalPath: string,
-): Promise<{
-  studentNo: string;
-  secureHost: string;
-  callbackUrl: string;
-  targetUrl: string;
-  cookies: ReturnType<typeof buildPuppeteerCookies>;
-}> {
-  const accountInfo = await getAccountInfoFromScript(ctx, "/");
-  const studentNo = accountInfo.studentNo;
-
-  if (!studentNo || studentNo.length < 3) {
-    throw new Error(
-      "Student number is missing from account information. Ensure you are authenticated and try again.",
-    );
-  }
-
-  const secureHost = resolveSecureHostFromStudentNo(studentNo);
-  const { targetUrl, callbackUrl } = buildSecurePortalCallbackUrl(
-    secureHost,
-    portalPath,
-  );
-
-  const cookieHeader = ctx.httpClient.defaults.headers["Cookie"];
-  if (!cookieHeader || typeof cookieHeader !== "string") {
-    throw new Error(
-      "Authentication cookies are not set. Use nlobby login or nlobby cookies set first.",
-    );
-  }
-
-  const cookies = buildPuppeteerCookies(cookieHeader, "nlobby.nnn.ed.jp");
-  if (cookies.length === 0) {
-    throw new Error(
-      "Failed to parse authentication cookies for browser session.",
-    );
-  }
-
-  return { studentNo, secureHost, callbackUrl, targetUrl, cookies };
 }
 
 export async function getSchooling(

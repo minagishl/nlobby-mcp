@@ -1,6 +1,8 @@
 import puppeteer, { type Browser, type CookieParam } from "puppeteer";
 import { CONFIG } from "../config.js";
 import { logger } from "../logger.js";
+import type { ApiContext } from "./context.js";
+import { getAccountInfoFromScript } from "./account.js";
 
 export function resolveSecureHostFromStudentNo(studentNo: string): string {
   const identifier = studentNo.charAt(2)?.toUpperCase();
@@ -121,6 +123,48 @@ export async function launchHeadlessBrowser(): Promise<Browser> {
     `Failed to launch a browser instance for secure portal access. ` +
       `Please install Chrome via "npx puppeteer browsers install chrome".\n${combinedMessage}`,
   );
+}
+
+export async function resolveSecurePortalContext(
+  ctx: ApiContext,
+  portalPath: string,
+): Promise<{
+  studentNo: string;
+  secureHost: string;
+  callbackUrl: string;
+  targetUrl: string;
+  cookies: CookieParam[];
+}> {
+  const accountInfo = await getAccountInfoFromScript(ctx, "/");
+  const studentNo = accountInfo.studentNo;
+
+  if (!studentNo || studentNo.length < 3) {
+    throw new Error(
+      "Student number is missing from account information. Ensure you are authenticated and try again.",
+    );
+  }
+
+  const secureHost = resolveSecureHostFromStudentNo(studentNo);
+  const { targetUrl, callbackUrl } = buildSecurePortalCallbackUrl(
+    secureHost,
+    portalPath,
+  );
+
+  const cookieHeader = ctx.httpClient.defaults.headers["Cookie"];
+  if (!cookieHeader || typeof cookieHeader !== "string") {
+    throw new Error(
+      "Authentication cookies are not set. Use nlobby login or nlobby cookies set first.",
+    );
+  }
+
+  const cookies = buildPuppeteerCookies(cookieHeader, "nlobby.nnn.ed.jp");
+  if (cookies.length === 0) {
+    throw new Error(
+      "Failed to parse authentication cookies for browser session.",
+    );
+  }
+
+  return { studentNo, secureHost, callbackUrl, targetUrl, cookies };
 }
 
 export async function fetchSecurePortalPage(options: {
